@@ -4,294 +4,107 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Warren Bao</title>
-  <meta name="description" content="Warren Bao, finance student at De La Salle University. Approved sales orders at a solar company and built its inventory system. Free for an internship from 7 January 2027.">
-  <meta name="theme-color" content="#7d0c14">
+  <meta name="description" content="Warren Bao, finance student at De La Salle University. Available for a finance internship from 7 January 2027.">
+  <meta name="theme-color" content="#06080f">
   <meta property="og:type" content="website">
   <meta property="og:title" content="Warren Bao">
-  <meta property="og:description" content="Finance student at De La Salle University. Free for an internship from 7 January 2027.">
+  <meta property="og:description" content="Finance student at De La Salle University. Available from 7 January 2027.">
   <meta property="og:url" content="https://warrenbaow-ctrl.github.io/warren-eportfolio/">
   <meta property="og:image" content="https://warrenbaow-ctrl.github.io/warren-eportfolio/images/og.png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   <meta name="twitter:card" content="summary_large_image">
   <link rel="icon" href="images/favicon.svg" type="image/svg+xml">
-  <link rel="preload" href="fonts/brygada.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="fonts/unbounded.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="css/site.css">
   <script>document.documentElement.classList.add('js')</script>
 </head>
 <body>
-  <a class="skip" href="#main">Skip to content</a>
+  <canvas class="field" aria-hidden="true" data-field></canvas>
 
   <header class="bar">
-    <a class="wordmark" href="#top">WB</a>
-    <nav aria-label="Sections">
-      <a href="#work">Work</a>
-      <a href="#record">Experience</a>
-      <a href="#about">About</a>
-      <a href="#contact">Contact</a>
-    </nav>
+    <a class="mark" href="#top" aria-label="Back to top">WB</a>
+    <span class="status"><i></i>Available Jan 2027</span>
+    <a class="bar-cta magnetic" href="#contact">Contact</a>
   </header>
 
-  <main id="main">
-
-    <!-- Hero: the name, with his photo set in the word space -->
+  <main>
+    <!-- 1. The name, drawn by the particle field -->
     <section class="hero" id="top">
-      <h1 class="monument" aria-label="Warren Bao">
-        <span class="mask"><span class="rise" style="--i:0">Warren</span></span>
-        <span class="slot shutter" aria-hidden="true"><img src="images/portrait-face.webp" width="800" height="500" alt=""></span>
-        <span class="mask"><span class="rise" style="--i:1">Bao</span></span>
-      </h1>
+      <h1 class="hero-name"><span>Warren</span> <span>Bao</span></h1>
       <div class="hero-foot">
-        <p class="hero-line">Finance student at De La Salle University. I approved sales orders at a solar company and built its inventory system.</p>
-        <div class="hero-act">
-          <a class="btn" href="mailto:warrenbaow@gmail.com?subject=Internship%20for%20Warren%20Bao">Email me</a>
-          <a class="link" href="Warren-Bao-Resume.pdf" target="_blank" rel="noopener">Résumé</a>
+        <p data-split>Finance student at De La Salle University.</p>
+        <p class="scroll-hint" aria-hidden="true">Scroll</p>
+      </div>
+    </section>
+
+    <!-- 2. The field becomes a chart; three numbers -->
+    <section class="chart-scene" data-chart-scene>
+      <div class="chart-pin">
+        <p class="big-line" data-split>I read the numbers,<br>then I make the call.</p>
+        <ul class="stats">
+          <li><b data-count="25" data-from="60">25</b><span>of 60 trade-show leads I sourced became accounts</span></li>
+          <li><b data-count="40" data-prefix="₱" data-suffix="K">₱40K</b><span>profit from the student business I helped lead</span></li>
+          <li><b>Finalist</b><span>National Finance Congress case competition, 2026</span></li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 3. Three pieces of work -->
+    <section class="work" id="work">
+      <article class="item">
+        <figure class="pic" data-pic><img src="images/aisun-expo.webp" width="440" height="558" alt="Aisun Solar booth at a trade expo" loading="lazy"></figure>
+        <div class="item-text">
+          <p class="when">2025 to 2026</p>
+          <h2 data-split>Financial Analyst at Aisun Solar</h2>
+          <p class="one">I approved daily sales orders and decided which big orders to release, hold or pass to management.</p>
         </div>
-      </div>
-    </section>
-
-    <!-- Work index: names are the index, the frame shows the active one -->
-    <section class="work" id="work" aria-labelledby="work-h">
-      <h2 id="work-h" class="sec-h" data-reveal>My work</h2>
-      <div class="work-grid">
-        <ol class="index" data-index>
-          <li data-reveal style="--i:0">
-            <a href="#supplyai" data-key="supplyai" aria-current="true">
-              <span class="name">SupplyAI</span><span class="meta">Inventory system, 2026</span>
-            </a>
-          </li>
-          <li data-reveal style="--i:1">
-            <a href="#desk" data-key="desk">
-              <span class="name">Order desk</span><span class="meta">Approvals at Aisun, 2025</span>
-            </a>
-          </li>
-          <li data-reveal style="--i:2">
-            <a href="#nfc" data-key="nfc">
-              <span class="name">NFC finals</span><span class="meta">Case competition, 2026</span>
-            </a>
-          </li>
-          <li data-reveal style="--i:3">
-            <a href="#research" data-key="rice">
-              <span class="name">Rice prices</span><span class="meta">Research in R, 2026</span>
-            </a>
-          </li>
-          <li data-reveal style="--i:4">
-            <a href="#research" data-key="farm">
-              <span class="name">Farm credit</span><span class="meta">Group study, 2026</span>
-            </a>
-          </li>
-        </ol>
-        <div class="frame" aria-hidden="true" data-frame>
-          <figure data-for="supplyai" class="on"><img src="images/shot-supplyai.webp" width="1000" height="1250" alt="" loading="lazy"><figcaption>Stock for two branches in one place.</figcaption></figure>
-          <figure data-for="desk"><img src="images/shot-desk.webp" width="1000" height="1250" alt="" loading="lazy"><figcaption>The checks I ran before releasing an order.</figcaption></figure>
-          <figure data-for="nfc"><img src="images/nfc-finalists.webp" width="332" height="238" alt="" loading="lazy"><figcaption>Our team at the National Finance Congress.</figcaption></figure>
-          <figure data-for="rice" class="type-card"><div><p>How much does rice move inflation in the Philippines?</p></div><figcaption>Results in December 2026.</figcaption></figure>
-          <figure data-for="farm" class="type-card"><div><p>Who lends to farmers in Southeast Asia?</p></div><figcaption>Philippines, Thailand, Vietnam, Indonesia, Malaysia.</figcaption></figure>
+      </article>
+      <article class="item flip">
+        <figure class="pic" data-pic><img src="images/nfc-finalists.webp" width="332" height="238" alt="Warren with teammates holding their finalist certificate" loading="lazy"></figure>
+        <div class="item-text">
+          <p class="when">July 2026</p>
+          <h2 data-split>National Finance Congress finalist</h2>
+          <p class="one">We built the valuation for a live company case and defended it in front of industry judges.</p>
         </div>
-      </div>
-    </section>
-
-    <!-- SupplyAI -->
-    <section class="case" id="supplyai" aria-labelledby="sa-h">
-      <div class="case-copy">
-        <h2 id="sa-h" class="case-h" data-reveal>SupplyAI</h2>
-        <p class="lead" data-reveal style="--i:1">An inventory system I built for Aisun Solar's Manila and Cebu branches.</p>
-        <div class="prose" data-reveal style="--i:2">
-          <p>The company had stock in two branches, and it was hard to check what we had before promising an order to a client. So I built a web app that tracks each item per branch. Wires are counted in meters, but staff can also enter them in rolls since that is how they are sold.</p>
-          <p>I am now adding quotes and approvals to it. I decided that discounted quotes should still go to a manager, since a discount is a judgment call and not just a rule. I also removed an AI receipt scanner I added because it was not accurate enough.</p>
+      </article>
+      <article class="item">
+        <figure class="pic" data-pic><img src="images/jema-assembly.webp" width="770" height="502" alt="DLSU JEMA general assembly" loading="lazy"></figure>
+        <div class="item-text">
+          <p class="when">2024 to now</p>
+          <h2 data-split>AVP for Documentation, DLSU JEMA</h2>
+          <p class="one">Promoted from JEMA Elite. Before this, I checked 8 event reports against receipts as a MaFIA officer.</p>
         </div>
-      </div>
-      <div class="tool" data-ui data-inventory data-reveal style="--i:3">
-        <div class="tool-top">
-          <p>SupplyAI <span>sample data</span></p>
-          <div class="seg" role="group" aria-label="Branch">
-            <button type="button" data-branch="manila" aria-pressed="true">Manila</button>
-            <button type="button" data-branch="cebu" aria-pressed="false">Cebu</button>
-            <button type="button" data-branch="all" aria-pressed="false">Both</button>
-          </div>
-        </div>
-        <table class="inv">
-          <thead><tr><th scope="col">Item</th><th scope="col" class="num">On hand</th><th scope="col" class="lv"><span class="sr">Level</span></th></tr></thead>
-          <tbody data-rows></tbody>
-        </table>
-        <div class="tool-bottom">
-          <p data-foot></p>
-          <div class="seg" role="group" aria-label="Wire unit">
-            <button type="button" data-unit="m" aria-pressed="true">Meters</button>
-            <button type="button" data-unit="roll" aria-pressed="false">Rolls</button>
-          </div>
-        </div>
+      </article>
+    </section>
+
+    <!-- 4. Who -->
+    <section class="who">
+      <figure class="portrait" data-pic><img src="images/portrait.webp" width="900" height="1124" alt="Portrait of Warren Bao" loading="lazy"></figure>
+      <div class="who-text">
+        <p class="big-line" data-split>Grew up in Binondo.<br>Speaks four languages.</p>
+        <p class="one">English, Filipino, Hokkien and Mandarin. BS Management of Financial Institutions, DLSU, class of 2027.</p>
       </div>
     </section>
 
-    <!-- Order desk: the live thing -->
-    <section class="case case-red" id="desk" aria-labelledby="desk-h">
-      <div class="case-copy">
-        <h2 id="desk-h" class="case-h" data-reveal>Order desk</h2>
-        <p class="lead" data-reveal style="--i:1">Try the checks I ran before releasing an order at Aisun.</p>
-        <div class="prose" data-reveal style="--i:2">
-          <p>We sold on preorder, so before an order went out I looked at who the buyer was, how big the order was and how much discount they asked for. Those three decided how much they paid up front and whether I could approve the discount myself.</p>
-          <p>The limits here are examples I set for this page and not company policy.</p>
-        </div>
-      </div>
-      <div class="tool tool-desk" data-ui data-desk data-reveal style="--i:3">
-        <div class="desk-in">
-          <div class="field">
-            <p class="f-label" id="client-l">Buyer</p>
-            <div class="seg seg-wide" role="group" aria-labelledby="client-l">
-              <button type="button" data-client="new" aria-pressed="false">New</button>
-              <button type="button" data-client="returning" aria-pressed="true">Returning</button>
-              <button type="button" data-client="recurring" aria-pressed="false">Regular</button>
-            </div>
-          </div>
-          <label class="field">
-            <span class="f-row"><span class="f-label">Order value</span><output data-o-out></output></span>
-            <input type="range" min="50000" max="2000000" step="25000" value="450000" data-order>
-          </label>
-          <label class="field">
-            <span class="f-row"><span class="f-label">Discount asked</span><output data-d-out></output></span>
-            <input type="range" min="0" max="15" step="0.5" value="4" data-disc>
-          </label>
-          <div class="presets">
-            <button type="button" data-preset="clean">Small repeat order</button>
-            <button type="button" data-preset="big">Big new buyer</button>
-            <button type="button" data-preset="deep">Deep discount</button>
-          </div>
-        </div>
-        <div class="desk-out" aria-live="polite">
-          <p class="stamp" data-stamp>Approve</p>
-          <p class="verdict" data-note></p>
-          <dl class="figs">
-            <div><dt>Down payment</dt><dd data-dp></dd></div>
-            <div><dt>Paid up front</dt><dd data-cash></dd></div>
-            <div><dt>Discount</dt><dd data-verdict></dd></div>
-          </dl>
-        </div>
-      </div>
-    </section>
-
-    <!-- NFC + research -->
-    <section class="case case-plain" id="nfc" aria-labelledby="nfc-h">
-      <figure class="nfc-pic shutter-scroll" data-reveal><img src="images/nfc-finalists.webp" width="332" height="238" alt="Warren and two teammates holding their finalist certificate" loading="lazy"></figure>
-      <div class="case-copy">
-        <h2 id="nfc-h" class="case-h" data-reveal>NFC finals</h2>
-        <div class="prose" data-reveal style="--i:1">
-          <p>Our team reached the finals of the National Finance Congress case competition in July 2026. We built the projections and valuation for a live company case, then defended our answer in front of industry judges.</p>
-        </div>
-      </div>
-    </section>
-
-    <section class="research" id="research" aria-labelledby="re-h">
-      <h2 id="re-h" class="sec-h" data-reveal>Research this term</h2>
-      <div class="re-list">
-        <article data-reveal style="--i:0">
-          <h3>Rice prices and inflation</h3>
-          <p>How much rice moves headline inflation in the Philippines, before and after the Rice Tariffication Law. We use PSA price data and run it in R. Results come out in December.</p>
-        </article>
-        <article data-reveal style="--i:1">
-          <h3>Farm credit in Southeast Asia</h3>
-          <p>A group study on how much credit goes to farming in five ASEAN countries and how it relates to farm output. I wrote the background of the study.</p>
-        </article>
-        <article data-reveal style="--i:2">
-          <h3>A headline audit</h3>
-          <p>For our statistics class, we take a viral claim that TikTok hurts your memory and check it against the study it came from.</p>
-        </article>
-      </div>
-    </section>
-
-    <!-- Photo band -->
-    <section class="band-wrap" aria-labelledby="band-h">
-      <h2 id="band-h" class="sec-h band-h" data-reveal>Where I've been</h2>
-      <div class="band shutter-scroll" data-reveal>
-        <figure style="--g:5"><img src="images/aisun-expo.webp" width="440" height="558" alt="Aisun Solar booth at a solar trade expo" loading="lazy"><p class="band-title">Aisun Solar<br>at the expo</p></figure>
-        <figure style="--g:2"><img src="images/nfc-finalists.webp" width="332" height="238" alt="Finalists at the National Finance Congress" loading="lazy"></figure>
-        <figure style="--g:3"><img src="images/jema-assembly.webp" width="770" height="502" alt="JEMA general assembly group photo" loading="lazy"></figure>
-        <figure style="--g:2"><img src="images/englicom.webp" width="770" height="436" alt="ENGLICOM members at an org fair" loading="lazy"></figure>
-      </div>
-      <p class="band-cap">Aisun's expo booth, the NFC finals, a JEMA general assembly and ENGLICOM's org fair.</p>
-    </section>
-
-    <!-- Names running off the edges -->
-    <section class="ticker" aria-label="Companies and groups">
-      <div class="ticker-track">
-        <p>Aisun Solar <i></i> DLSU MaFIA <i></i> DLSU JEMA <i></i> National Finance Congress <i></i> ENGLICOM <i></i> AAA Worldwide <i></i></p>
-        <p aria-hidden="true">Aisun Solar <i></i> DLSU MaFIA <i></i> DLSU JEMA <i></i> National Finance Congress <i></i> ENGLICOM <i></i> AAA Worldwide <i></i></p>
-      </div>
-    </section>
-    <p class="ticker-cap">The companies and student groups I have worked with since 2023.</p>
-
-    <!-- Track record as a line-up -->
-    <section class="record" id="record" aria-labelledby="rec-h">
-      <h2 id="rec-h" class="sr">Experience</h2>
-      <h3 class="part">Work</h3>
-      <table class="lineup">
-        <tbody>
-          <tr data-reveal><td>Financial Analyst</td><td>Aisun Solar Trading</td><td>Part-time</td><td>Oct 2025 – May 2026</td></tr>
-          <tr data-reveal><td>Admin and Operations</td><td>AAA Worldwide Construction</td><td>Summer job</td><td>Jul – Sep 2023</td></tr>
-        </tbody>
-      </table>
-      <h3 class="part">Leadership</h3>
-      <table class="lineup">
-        <tbody>
-          <tr data-reveal><td>Case finalist</td><td>National Finance Congress</td><td>DLSU MaFIA</td><td>Jul 2026</td></tr>
-          <tr data-reveal><td>AVP for Documentation</td><td>DLSU JEMA</td><td>Student org</td><td>2024 – now</td></tr>
-          <tr data-reveal><td>Junior Officer, Documentation</td><td>DLSU MaFIA</td><td>Student org</td><td>Sep 2024 – Aug 2025</td></tr>
-          <tr data-reveal><td>Committee Coordinator</td><td>DLSU ENGLICOM</td><td>Student org</td><td>Sep 2023 – Aug 2025</td></tr>
-          <tr data-reveal><td>Fundraising team</td><td>Medical Mission</td><td>Outreach</td><td>2024</td></tr>
-        </tbody>
-      </table>
-      <h3 class="part">School</h3>
-      <table class="lineup">
-        <tbody>
-          <tr data-reveal><td>BS Management of Financial Institutions</td><td>De La Salle University</td><td>CGPA 3.30</td><td>2023 – 2027</td></tr>
-          <tr data-reveal><td>ABM strand</td><td>Saint Jude Catholic School</td><td>Senior high</td><td>2021 – 2023</td></tr>
-        </tbody>
-      </table>
-      <p class="record-note">Some numbers from these roles: 60 leads sourced at trade shows with 25 turned into accounts, 8 event reports checked against receipts, and payroll for 20 to 30 workers each cycle. The full list is in my <a class="link" href="Warren-Bao-Resume.pdf" target="_blank" rel="noopener">résumé</a>.</p>
-    </section>
-
-    <!-- About: pinned title, pictures pass -->
-    <section class="about" id="about" aria-labelledby="about-h">
-      <div class="pin"><h2 id="about-h">From Binondo</h2></div>
-      <div class="passing">
-        <figure class="p-left">
-          <img src="images/portrait.webp" width="900" height="1125" alt="Portrait of Warren Bao" loading="lazy">
-          <figcaption><strong>Warren Bao</strong><span>Manila</span>I grew up in Binondo and I speak English, Filipino, Hokkien and Mandarin. I got into finance because I liked math and business ideas in school.</figcaption>
-        </figure>
-        <figure class="p-right">
-          <img src="images/abm-fair.webp" width="430" height="524" alt="Student venture booth at the ABM Business Fair" loading="lazy">
-          <figcaption><strong>ABM Business Fair</strong><span>2023</span>My first real business was a student booth in senior high. I handled getting customers in, and we made over ₱40,000 in profit.</figcaption>
-        </figure>
-        <figure class="p-left">
-          <img src="images/aaa-site.webp" width="1400" height="1050" alt="AAA Worldwide Construction project site" loading="lazy">
-          <figcaption><strong>AAA Worldwide Construction</strong><span>2023</span>My first job was the summer before college. I computed payroll and kept track of materials across two sites.</figcaption>
-        </figure>
-      </div>
-    </section>
-
-    <!-- Contact: address in display rows -->
-    <section class="contact" id="contact" aria-label="Contact">
-      <a class="row" href="mailto:warrenbaow@gmail.com?subject=Internship%20for%20Warren%20Bao" data-reveal>warrenbaow@gmail.com</a>
-      <a class="row" href="https://www.linkedin.com/in/warren-bao/" target="_blank" rel="noopener" data-reveal>LinkedIn</a>
-      <a class="row" href="tel:+639175688678" data-reveal>0917 568 8678</a>
-      <p class="row" data-reveal>Free from 7 January 2027</p>
-      <div class="row row-hello" data-reveal>
-        <span>Say hello</span>
-        <a class="round" href="mailto:warrenbaow@gmail.com?subject=Internship%20for%20Warren%20Bao" aria-label="Email Warren">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h13M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2"/></svg>
-        </a>
-      </div>
+    <!-- 5. Contact -->
+    <section class="contact" id="contact">
+      <p class="contact-kicker">Looking for a finance internship from 7 January 2027.</p>
+      <a class="talk magnetic" href="mailto:warrenbaow@gmail.com?subject=Internship%20for%20Warren%20Bao"><span>Let's talk</span></a>
+      <ul class="links">
+        <li><span>Email</span><a href="mailto:warrenbaow@gmail.com">warrenbaow@gmail.com</a></li>
+        <li><span>LinkedIn</span><a href="https://www.linkedin.com/in/warren-bao/" target="_blank" rel="noopener">warren-bao</a></li>
+        <li><span>Phone</span><a href="tel:+639175688678">0917 568 8678</a></li>
+        <li><span>Résumé</span><a href="Warren-Bao-Resume.pdf" target="_blank" rel="noopener">Open PDF</a></li>
+      </ul>
     </section>
   </main>
 
-  <footer class="foot">
-    <p class="foot-name" aria-hidden="true">Warren Bao</p>
-    <div class="foot-row">
-      <p>Corporate finance, credit and financial analysis internships in the Philippines.</p>
-      <a class="link" href="Warren-Bao-Resume.pdf" target="_blank" rel="noopener">Download résumé</a>
-    </div>
-  </footer>
-
+  <script src="js/vendor/three.min.js" defer></script>
+  <script src="js/vendor/gsap.min.js" defer></script>
+  <script src="js/vendor/ScrollTrigger.min.js" defer></script>
+  <script src="js/vendor/lenis.min.js" defer></script>
+  <script src="js/field.js" defer></script>
   <script src="js/site.js" defer></script>
 </body>
 </html>

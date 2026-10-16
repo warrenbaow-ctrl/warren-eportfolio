@@ -1,127 +1,85 @@
 (() => {
   "use strict";
-  const $ = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
   const calm = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const { gsap, ScrollTrigger, Lenis } = window;
+  if (!gsap || !ScrollTrigger) return; // page still reads fine without motion
+  gsap.registerPlugin(ScrollTrigger);
 
-  /* Reveal once on entry; never leaves content hidden */
-  const reveal = $$("[data-reveal]");
-  if ("IntersectionObserver" in window) {
-    const io = new IntersectionObserver((es) => {
-      es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add("is-in"); io.unobserve(e.target); } });
-    }, { rootMargin: "0px 0px -10% 0px", threshold: 0.08 });
-    // A fully clipped picture reports no intersection, so its section is watched instead.
-    reveal.forEach((el) => {
-      if (!el.classList.contains("shutter-scroll")) { io.observe(el); return; }
-      const watch = new IntersectionObserver((es) => {
-        if (es.some((e) => e.isIntersecting)) { el.classList.add("is-in"); watch.disconnect(); }
-      }, { rootMargin: "0px 0px -25% 0px" });
-      watch.observe(el.parentElement);
+  /* Smooth scroll, driven by GSAP's clock so the field and the text move together */
+  if (Lenis && !calm) {
+    const lenis = new Lenis({ lerp: 0.1, smoothWheel: true });
+    lenis.on("scroll", ScrollTrigger.update);
+    gsap.ticker.add((t) => lenis.raf(t * 1000));
+    gsap.ticker.lagSmoothing(0);
+    $$('a[href^="#"]').forEach((a) => a.addEventListener("click", (e) => {
+      const target = document.querySelector(a.getAttribute("href"));
+      if (target) { e.preventDefault(); lenis.scrollTo(target, { duration: 1.4 }); }
+    }));
+  }
+
+  /* Split text into words that rise from a mask */
+  $$("[data-split]").forEach((el) => {
+    const parts = el.innerHTML.split(/<br\s*\/?>/i);
+    el.innerHTML = parts.map((line) => line.trim().split(/\s+/).map((w) => `<span class="w-mask"><span class="w">${w}</span></span>`).join(" ")).join("<br>");
+  });
+  const style = document.createElement("style");
+  style.textContent = ".w-mask{display:inline-block;overflow:hidden;vertical-align:top;padding-bottom:.1em;margin-bottom:-.1em}.w{display:inline-block}";
+  document.head.appendChild(style);
+
+  if (calm) { if (window.WBField) window.WBField.set(0, 0); return; }
+
+  /* Field: name to chart to stars, tied to scroll */
+  const field = { t1: 0, t2: 0 };
+  const push = () => window.WBField && window.WBField.set(field.t1, field.t2);
+  gsap.to(field, { t1: 1, ease: "none", onUpdate: push, scrollTrigger: { trigger: "[data-chart-scene]", start: "top 85%", end: "top -20%", scrub: 0.6 } });
+  gsap.to(field, { t2: 1, ease: "none", onUpdate: push, scrollTrigger: { trigger: "[data-chart-scene]", start: "bottom 95%", end: "bottom 15%", scrub: 0.6 } });
+
+  /* Hero line arrives after the particles gather */
+  gsap.from(".hero-foot .w", { yPercent: 110, duration: 1.1, ease: "expo.out", stagger: 0.04, delay: 1.6 });
+  gsap.from(".scroll-hint", { opacity: 0, duration: 1, delay: 2.2 });
+  gsap.from(".bar > *", { y: -14, opacity: 0, duration: 0.9, ease: "expo.out", stagger: 0.08, delay: 1.3 });
+  gsap.to(".hero-foot", { opacity: 0, y: -30, ease: "none", scrollTrigger: { trigger: ".hero", start: "top top", end: "bottom 40%", scrub: true } });
+
+  /* Words rise as each heading arrives */
+  $$("[data-split]").forEach((el) => {
+    if (el.closest(".hero")) return;
+    gsap.from($$(".w", el), { yPercent: 110, duration: 1.1, ease: "expo.out", stagger: 0.035, scrollTrigger: { trigger: el, start: "top 82%" } });
+  });
+
+  /* Chart scene: stats arrive once the chart has formed, numbers count up */
+  gsap.from(".stats li", { y: 40, opacity: 0, duration: 1, ease: "expo.out", stagger: 0.12, scrollTrigger: { trigger: "[data-chart-scene]", start: "top -10%" } });
+  $$("[data-count]").forEach((b) => {
+    const to = +b.dataset.count, from = +(b.dataset.from || 0), pre = b.dataset.prefix || "", suf = b.dataset.suffix || "";
+    const o = { v: from };
+    b.textContent = pre + from + suf;
+    gsap.to(o, { v: to, duration: 1.6, ease: "power3.out", onUpdate: () => (b.textContent = pre + Math.round(o.v) + suf), scrollTrigger: { trigger: "[data-chart-scene]", start: "top -10%" } });
+  });
+
+  /* Pictures open from a mask, then drift inside their frame */
+  $$("[data-pic]").forEach((fig) => {
+    const img = fig.querySelector("img");
+    gsap.fromTo(fig, { clipPath: "inset(100% 0% 0% 0%)" }, { clipPath: "inset(0% 0% 0% 0%)", duration: 1.4, ease: "expo.inOut", scrollTrigger: { trigger: fig, start: "top 85%" } });
+    gsap.fromTo(img, { yPercent: -8, scale: 1.15 }, { yPercent: 0, scale: 1, ease: "none", scrollTrigger: { trigger: fig, start: "top bottom", end: "bottom top", scrub: true } });
+  });
+  $$(".item-text .when, .item-text .one, .who-text .one, .contact-kicker, .links li").forEach((el) => {
+    gsap.from(el, { y: 24, opacity: 0, duration: 1, ease: "expo.out", scrollTrigger: { trigger: el, start: "top 90%" } });
+  });
+  gsap.from(".talk", { scale: 0.85, opacity: 0, duration: 1.2, ease: "expo.out", scrollTrigger: { trigger: ".contact", start: "top 70%" } });
+
+  /* Magnetic buttons */
+  if (window.matchMedia("(hover: hover) and (pointer: fine)").matches) {
+    $$(".magnetic").forEach((el) => {
+      const inner = el.querySelector("span") || el;
+      const xTo = gsap.quickTo(el, "x", { duration: 0.6, ease: "elastic.out(1, 0.4)" });
+      const yTo = gsap.quickTo(el, "y", { duration: 0.6, ease: "elastic.out(1, 0.4)" });
+      el.addEventListener("pointermove", (e) => {
+        const r = el.getBoundingClientRect();
+        const dx = e.clientX - (r.left + r.width / 2), dy = e.clientY - (r.top + r.height / 2);
+        xTo(dx * 0.3); yTo(dy * 0.35);
+        if (inner !== el) gsap.to(inner, { x: dx * 0.12, y: dy * 0.12, duration: 0.4 });
+      });
+      el.addEventListener("pointerleave", () => { xTo(0); yTo(0); if (inner !== el) gsap.to(inner, { x: 0, y: 0, duration: 0.6, ease: "elastic.out(1, 0.4)" }); });
     });
-    window.addEventListener("load", () => setTimeout(() => {
-      reveal.forEach((el) => { const r = el.getBoundingClientRect(); if (r.top < innerHeight && r.bottom > 0) el.classList.add("is-in"); });
-    }, 2500));
-  } else reveal.forEach((el) => el.classList.add("is-in"));
-
-  /* Bar takes the light ink over red fields */
-  const bar = $(".bar");
-  const fields = $$(".case-red, .ticker, .contact, .foot");
-  if (bar && "IntersectionObserver" in window) {
-    const over = new Set();
-    const fo = new IntersectionObserver((es) => {
-      es.forEach((e) => (e.isIntersecting ? over.add(e.target) : over.delete(e.target)));
-      bar.classList.toggle("on-field", over.size > 0);
-    }, { rootMargin: "0px 0px -94% 0px" });
-    fields.forEach((f) => fo.observe(f));
-  }
-
-  /* Work index: hover or focus moves the active name and swaps the frame */
-  const index = $("[data-index]");
-  const frame = $("[data-frame]");
-  if (index && frame) {
-    const links = $$("a", index);
-    const set = (a) => {
-      links.forEach((l) => l.setAttribute("aria-current", String(l === a)));
-      $$("figure", frame).forEach((f) => f.classList.toggle("on", f.dataset.for === a.dataset.key));
-    };
-    links.forEach((a) => { a.addEventListener("mouseenter", () => set(a)); a.addEventListener("focus", () => set(a)); });
-  }
-
-  const peso = (v) => v >= 1e6 ? "₱" + (v / 1e6).toFixed(2).replace(/\.?0+$/, "") + "M" : "₱" + Math.round(v / 1000) + "K";
-  const press = (btns, on) => btns.forEach((b) => b.setAttribute("aria-pressed", String(b === on)));
-
-  /* SupplyAI sample */
-  const inv = $("[data-inventory]");
-  if (inv) {
-    const ITEMS = [
-      ["Mono solar panel", "550 W", "pcs", 128, 46, 40],
-      ["Hybrid inverter", "5 kW", "pcs", 7, 6, 8],
-      ["Lithium battery", "5 kWh", "pcs", 9, 11, 6],
-      ["PV wire", "4 mm², 100 m a roll", "wire", 1850, 420, 500],
-      ["PV wire", "6 mm², 100 m a roll", "wire", 600, 900, 500],
-      ["MC4 connectors", "pairs", "pairs", 340, 85, 100],
-      ["Mounting rail", "2.4 m", "pcs", 210, 140, 120]
-    ];
-    const st = { b: "manila", u: "m" };
-    const rows = $("[data-rows]", inv), foot = $("[data-foot]", inv);
-    const bb = $$("[data-branch]", inv), ub = $$("[data-unit]", inv);
-    const q = (unit, n) => unit === "wire"
-      ? (st.u === "roll" ? (n / 100 % 1 ? (n / 100).toFixed(1) : n / 100) + " rolls" : n.toLocaleString("en-PH") + " m")
-      : n.toLocaleString("en-PH") + (unit === "pairs" ? " pairs" : " pcs");
-    const draw = () => {
-      let low = 0;
-      rows.innerHTML = ITEMS.map(([name, spec, unit, m, c, min]) => {
-        const n = st.b === "manila" ? m : st.b === "cebu" ? c : m + c;
-        const mn = st.b === "all" ? min * 2 : min;
-        const isLow = n < mn; if (isLow) low++;
-        const w = Math.min(1, n / (mn * 4)).toFixed(3);
-        return `<tr class="${isLow ? "low" : ""}"><td>${name}${isLow ? '<span class="flag">Reorder</span>' : ""}<small>${spec}</small></td><td class="num">${q(unit, n)}</td><td class="lvc"><div class="lvl"><i style="transform:scaleX(${w})"></i><b></b></div></td></tr>`;
-      }).join("");
-      const where = st.b === "manila" ? "Manila" : st.b === "cebu" ? "Cebu" : "both branches";
-      foot.textContent = low ? `${low} ${low === 1 ? "item needs" : "items need"} a reorder in ${where}. The line marks the reorder point.` : `Nothing needs a reorder in ${where}.`;
-    };
-    bb.forEach((b) => b.addEventListener("click", () => { st.b = b.dataset.branch; press(bb, b); draw(); }));
-    ub.forEach((b) => b.addEventListener("click", () => { st.u = b.dataset.unit; press(ub, b); draw(); }));
-    draw();
-  }
-
-  /* Order desk */
-  const desk = $("[data-desk]");
-  if (desk) {
-    const st = { c: "returning", o: 450000, d: 4 };
-    const cb = $$("[data-client]", desk), order = $("[data-order]", desk), disc = $("[data-disc]", desk), stamp = $("[data-stamp]", desk);
-    let last = "";
-    const run = () => {
-      let dp = st.c === "new" ? 50 : st.c === "returning" ? 40 : 30;
-      if (st.o >= 1200000) dp += 20; else if (st.o >= 600000) dp += 10;
-      const cap = st.c === "recurring" ? 8 : st.c === "returning" ? 5 : 3;
-      let call, tone, note, verdict;
-      if (st.d > cap) {
-        call = "Refer"; tone = "refer"; verdict = "Goes to management";
-        note = `${st.d}% is above the ${cap}% I can approve for this buyer, so I write it up for management. The order can still move once ${dp}% is paid.`;
-      } else if (dp >= 60) {
-        call = "Hold"; tone = "hold"; verdict = st.d ? `I approve ${st.d}%` : "None asked";
-        note = `This is a big order, so I hold it until the ${dp}% down payment comes in.`;
-      } else {
-        call = "Approve"; tone = "ok"; verdict = st.d ? `I approve ${st.d}%` : "None asked";
-        note = `I release it to sales once the ${dp}% down payment is confirmed.`;
-      }
-      $("[data-o-out]", desk).textContent = peso(st.o);
-      $("[data-d-out]", desk).textContent = st.d ? st.d + "%" : "None";
-      stamp.textContent = call; stamp.dataset.tone = tone;
-      if (last && call !== last && !calm) { stamp.classList.remove("again"); void stamp.offsetWidth; stamp.classList.add("again"); }
-      last = call;
-      $("[data-note]", desk).textContent = note;
-      $("[data-dp]", desk).textContent = dp + "%";
-      $("[data-cash]", desk).textContent = peso(st.o * dp / 100);
-      $("[data-verdict]", desk).textContent = verdict;
-    };
-    const sync = () => { order.value = st.o; disc.value = st.d; press(cb, cb.find((b) => b.dataset.client === st.c)); run(); };
-    cb.forEach((b) => b.addEventListener("click", () => { st.c = b.dataset.client; sync(); }));
-    order.addEventListener("input", () => { st.o = +order.value; run(); });
-    disc.addEventListener("input", () => { st.d = +disc.value; run(); });
-    const P = { clean: { c: "recurring", o: 250000, d: 3 }, big: { c: "new", o: 1400000, d: 0 }, deep: { c: "returning", o: 700000, d: 12 } };
-    $$("[data-preset]", desk).forEach((b) => b.addEventListener("click", () => { Object.assign(st, P[b.dataset.preset]); sync(); }));
-    sync();
   }
 })();
