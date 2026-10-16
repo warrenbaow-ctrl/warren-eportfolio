@@ -5,118 +5,276 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Warren Bao</title>
   <meta name="description" content="Warren Bao, finance student at De La Salle University. Available for a finance internship from 7 January 2027.">
-  <meta name="theme-color" content="#06080f">
+  <meta name="theme-color" content="#f3f5f9">
   <meta property="og:type" content="website">
   <meta property="og:title" content="Warren Bao">
   <meta property="og:description" content="Finance student at De La Salle University. Available from 7 January 2027.">
   <meta property="og:url" content="https://warrenbaow-ctrl.github.io/warren-eportfolio/">
   <meta property="og:image" content="https://warrenbaow-ctrl.github.io/warren-eportfolio/images/og.png">
-  <meta property="og:image:width" content="1200">
-  <meta property="og:image:height" content="630">
   <meta name="twitter:card" content="summary_large_image">
   <link rel="icon" href="images/favicon.svg" type="image/svg+xml">
-  <link rel="preload" href="fonts/unbounded.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="fonts/chakrapetch-semibold.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="css/site.css">
   <script>document.documentElement.classList.add('js')</script>
 </head>
 <body>
-  <canvas class="field" aria-hidden="true" data-field></canvas>
+  <!-- Ambient layers: soft colour fields for the glass to refract, a fine grid, the 3D core -->
+  <div class="ambient" aria-hidden="true"><i class="orb o1"></i><i class="orb o2"></i><i class="orb o3"></i></div>
+  <div class="grid-bg" aria-hidden="true"></div>
+  <canvas class="core" aria-hidden="true" data-core></canvas>
+  <div class="cursor" aria-hidden="true" data-cursor></div>
 
-  <header class="bar">
-    <a class="mark" href="#top" aria-label="Back to top">WB</a>
-    <span class="status"><i></i>Available Jan 2027</span>
-    <a class="bar-cta magnetic" href="#contact">Contact</a>
+  <header class="top glass">
+    <a class="logo" href="#boot"><span class="logo-mark"></span>WB/OS</a>
+    <nav aria-label="Sections">
+      <a href="#overview">Overview</a>
+      <a href="#work">Work</a>
+      <a href="#lead">Leadership</a>
+      <a href="#skills">Skills</a>
+      <a href="#contact">Contact</a>
+    </nav>
+    <p class="clock mono" aria-label="Time in Manila"><span data-clock>--:--:--</span> MNL</p>
   </header>
 
+  <ol class="rail" aria-hidden="true">
+    <li data-rail="boot">01</li><li data-rail="overview">02</li><li data-rail="work">03</li><li data-rail="lead">04</li><li data-rail="skills">05</li><li data-rail="gallery">06</li><li data-rail="contact">07</li>
+  </ol>
+
   <main>
-    <!-- 1. The name, drawn by the particle field -->
-    <section class="hero" id="top">
-      <h1 class="hero-name"><span>Warren</span> <span>Bao</span></h1>
-      <div class="hero-foot">
-        <p data-split>Finance student at De La Salle University.</p>
-        <p class="scroll-hint" aria-hidden="true">Scroll</p>
-      </div>
-    </section>
-
-    <!-- 2. The field becomes a chart; three numbers -->
-    <section class="chart-scene" data-chart-scene>
-      <div class="chart-pin">
-        <p class="big-line" data-split>I read the numbers,<br>then I make the call.</p>
-        <ul class="stats">
-          <li><b data-count="25" data-from="60">25</b><span>of 60 trade-show leads I sourced became accounts</span></li>
-          <li><b data-count="40" data-prefix="₱" data-suffix="K">₱40K</b><span>profit from the student business I helped lead</span></li>
-          <li><b>Finalist</b><span>National Finance Congress case competition, 2026</span></li>
-        </ul>
-      </div>
-    </section>
-
-    <!-- 3. Three pieces of work -->
-    <section class="work" id="work">
-      <article class="item">
-        <figure class="pic" data-pic><img src="images/aisun-expo.webp" width="440" height="558" alt="Aisun Solar booth at a trade expo" loading="lazy"></figure>
-        <div class="item-text">
-          <p class="when">2025 to 2026</p>
-          <h2 data-split>Financial Analyst at Aisun Solar</h2>
-          <p class="one">I approved daily sales orders and decided which big orders to release, hold or pass to management.</p>
+    <!-- 01 Boot -->
+    <section class="screen hero" id="boot">
+      <div class="hero-left">
+        <p class="mono boot" data-boot>&gt; loading profile_</p>
+        <h1 class="name"><span data-scramble>WARREN</span><span data-scramble>BAO</span></h1>
+        <p class="lede">Finance student at De La Salle University.<br>Open for a finance internship from 7 January 2027.</p>
+        <div class="cta-row">
+          <a class="btn btn-solid magnetic" href="#contact"><span>Hire me</span></a>
+          <a class="btn btn-glass magnetic" href="Warren-Bao-Resume.pdf" target="_blank" rel="noopener"><span>Résumé</span></a>
         </div>
-      </article>
-      <article class="item flip">
-        <figure class="pic" data-pic><img src="images/nfc-finalists.webp" width="332" height="238" alt="Warren with teammates holding their finalist certificate" loading="lazy"></figure>
-        <div class="item-text">
-          <p class="when">July 2026</p>
-          <h2 data-split>National Finance Congress finalist</h2>
-          <p class="one">We built the valuation for a live company case and defended it in front of industry judges.</p>
-        </div>
-      </article>
-      <article class="item">
-        <figure class="pic" data-pic><img src="images/jema-assembly.webp" width="770" height="502" alt="DLSU JEMA general assembly" loading="lazy"></figure>
-        <div class="item-text">
-          <p class="when">2024 to now</p>
-          <h2 data-split>AVP for Documentation, DLSU JEMA</h2>
-          <p class="one">Promoted from JEMA Elite. Before this, I checked 8 event reports against receipts as a MaFIA officer.</p>
-        </div>
-      </article>
+      </div>
+
+      <aside class="id-card glass tilt" aria-label="Profile card">
+        <div class="id-head mono"><span>OPERATOR PROFILE</span><span class="live"><i></i>ONLINE</span></div>
+        <div class="id-photo"><img src="images/portrait.webp" width="900" height="1124" alt="Portrait of Warren Bao"><span class="scan"></span><span class="corner c1"></span><span class="corner c2"></span><span class="corner c3"></span><span class="corner c4"></span></div>
+        <dl class="id-data mono">
+          <div><dt>Name</dt><dd>Warren M. Bao</dd></div>
+          <div><dt>Degree</dt><dd>BS Mgmt. of Financial Institutions</dd></div>
+          <div><dt>School</dt><dd>De La Salle University</dd></div>
+          <div><dt>Base</dt><dd>Binondo, Manila</dd></div>
+          <div><dt>Status</dt><dd class="ok">Available 07.01.2027</dd></div>
+        </dl>
+      </aside>
+      <p class="scroll-cue mono" aria-hidden="true"><span></span>scroll</p>
     </section>
 
-    <!-- 3b. Photo wall -->
-    <section class="wall" aria-labelledby="wall-h">
-      <h2 id="wall-h" class="wall-h" data-split>The rest of the story</h2>
-      <div class="wall-board">
-        <figure class="snap" style="--x:4%;--y:6%;--r:-7deg;--w:24%"><img src="images/abm-fair.webp" width="430" height="524" alt="Student venture booth at the ABM Business Fair" loading="lazy"><figcaption>First business, 2023</figcaption></figure>
-        <figure class="snap" style="--x:30%;--y:0%;--r:4deg;--w:30%"><img src="images/englicom.webp" width="770" height="436" alt="ENGLICOM members at the org fair" loading="lazy"><figcaption>ENGLICOM, 5 events led</figcaption></figure>
-        <figure class="snap" style="--x:66%;--y:8%;--r:-3deg;--w:28%"><img src="images/aaa-site.webp" width="800" height="599" alt="AAA Worldwide Construction project site" loading="lazy"><figcaption>First job, AAA site</figcaption></figure>
-        <figure class="snap" style="--x:14%;--y:52%;--r:5deg;--w:27%"><img src="images/fusion.webp" width="542" height="360" alt="Fusion marketing event team" loading="lazy"><figcaption>Fusion, JEMA event</figcaption></figure>
-        <figure class="snap" style="--x:48%;--y:50%;--r:-5deg;--w:22%"><img src="images/nfc-finalists.webp" width="332" height="238" alt="NFC finalists with their certificate" loading="lazy"><figcaption>NFC finals</figcaption></figure>
-        <figure class="snap" style="--x:74%;--y:56%;--r:6deg;--w:20%"><img src="images/aisun-expo.webp" width="440" height="558" alt="Aisun Solar expo booth" loading="lazy"><figcaption>Aisun at the expo</figcaption></figure>
+    <!-- 02 Overview -->
+    <section class="screen" id="overview">
+      <header class="sec-head"><p class="mono tag">02 / Overview</p><h2 data-scramble-h>Profile at a glance</h2></header>
+      <div class="dash dash-overview">
+        <article class="panel glass tilt span-2">
+          <p class="p-label mono">Academic standing</p>
+          <div class="gauge-wrap">
+            <svg class="gauge" viewBox="0 0 200 120" aria-hidden="true">
+              <path class="g-track" d="M20 110 A80 80 0 0 1 180 110"/>
+              <path class="g-fill" d="M20 110 A80 80 0 0 1 180 110" pathLength="100" data-gauge="82.5"/>
+            </svg>
+            <div class="gauge-num"><b data-count="3.30" data-dec="2">3.30</b><span class="mono">/ 4.00 CGPA</span></div>
+          </div>
+          <p class="p-foot">BS Management of Financial Institutions, expected August 2027</p>
+        </article>
+        <article class="panel glass tilt">
+          <p class="p-label mono">Roles held</p>
+          <p class="kpi"><b data-count="8">8</b></p>
+          <p class="p-foot">2 jobs and 6 org, outreach and competition roles since 2023</p>
+        </article>
+        <article class="panel glass tilt">
+          <p class="p-label mono">Languages</p>
+          <p class="kpi"><b data-count="4">4</b></p>
+          <p class="p-foot">English, Filipino, Hokkien, Mandarin</p>
+        </article>
+        <article class="panel glass tilt span-2">
+          <p class="p-label mono">Best results</p>
+          <ul class="mini-stats">
+            <li><b data-count="42" data-suffix="%">42%</b><span>trade-show leads turned into accounts</span></li>
+            <li><b data-count="40" data-prefix="₱" data-suffix="K">₱40K</b><span>profit, first student business</span></li>
+            <li><b>Finalist</b><span>National Finance Congress case competition</span></li>
+          </ul>
+        </article>
+        <article class="panel glass tilt span-2">
+          <p class="p-label mono">Looking for</p>
+          <ul class="chips">
+            <li>Corporate finance</li><li>Credit</li><li>Financial analysis</li><li>Philippines</li><li>Start 07.01.2027</li>
+          </ul>
+        </article>
       </div>
     </section>
 
-    <!-- 4. Who -->
-    <section class="who">
-      <figure class="portrait" data-pic><img src="images/portrait.webp" width="900" height="1124" alt="Portrait of Warren Bao" loading="lazy"></figure>
-      <div class="who-text">
-        <p class="big-line" data-split>Grew up in Binondo.<br>Speaks four languages.</p>
-        <p class="one">English, Filipino, Hokkien and Mandarin. BS Management of Financial Institutions, DLSU, class of 2027.</p>
+    <!-- 03 Work -->
+    <section class="screen" id="work">
+      <header class="sec-head"><p class="mono tag">03 / Work</p><h2 data-scramble-h>Experience dashboard</h2></header>
+      <div class="dash dash-work">
+        <article class="panel glass span-4 gantt-panel">
+          <p class="p-label mono">Timeline 2023 to 2027</p>
+          <div class="gantt" data-gantt>
+            <div class="g-axis mono"><span style="--s:0">2023</span><span style="--s:20">2024</span><span style="--s:40">2025</span><span style="--s:60">2026</span><span style="--s:80">2027</span></div>
+            <div class="g-row"><span class="g-name">AAA Worldwide, Admin and Ops</span><span class="g-bar" style="--s:10;--e:15"></span></div>
+            <div class="g-row"><span class="g-name">DLSU ENGLICOM, Coordinator</span><span class="g-bar" style="--s:13.3;--e:53.3"></span></div>
+            <div class="g-row"><span class="g-name">DLSU MaFIA, Junior Officer</span><span class="g-bar" style="--s:33.3;--e:53.3"></span></div>
+            <div class="g-row"><span class="g-name">DLSU JEMA, Elite to AVP</span><span class="g-bar" style="--s:33.3;--e:76"></span></div>
+            <div class="g-row"><span class="g-name">Aisun Solar, Financial Analyst</span><span class="g-bar hot" style="--s:55;--e:68.3"></span></div>
+            <div class="g-row"><span class="g-name">NFC case competition</span><span class="g-dot" style="--s:70.8"></span></div>
+            <div class="g-row"><span class="g-name">DLSU, BS MFI</span><span class="g-bar soft" style="--s:13.3;--e:93.3"></span></div>
+            <span class="g-now" style="--s:76"><em class="mono">now</em></span>
+          </div>
+        </article>
+
+        <article class="panel glass tilt span-2">
+          <div class="p-top"><p class="p-label mono">Aisun Solar Trading Inc.</p><p class="pill mono">Oct 2025 – May 2026</p></div>
+          <h3>Financial Analyst</h3>
+          <p class="p-body">Approved daily sales orders and decided which big orders to release, hold or pass to management.</p>
+          <div class="funnel" aria-label="Lead funnel">
+            <div class="f-row"><span class="mono">Leads sourced</span><span class="f-bar" style="--w:100"><b data-count="60">60</b></span></div>
+            <div class="f-row"><span class="mono">Qualified accounts</span><span class="f-bar hot" style="--w:41.7"><b data-count="25">25</b></span></div>
+          </div>
+          <p class="p-foot mono">Conversion 42% at trade conventions</p>
+        </article>
+
+        <article class="panel glass tilt span-2">
+          <div class="p-top"><p class="p-label mono">AAA Worldwide Construction</p><p class="pill mono">Jul – Sep 2023</p></div>
+          <h3>Admin and Operations</h3>
+          <p class="p-body">Ran payroll and kept track of materials for two project sites.</p>
+          <div class="twin">
+            <div><b data-count="30" data-prefix="20–">20–30</b><span class="mono">workers paid per cycle</span></div>
+            <div><b data-count="2">2</b><span class="mono">project sites tracked</span></div>
+          </div>
+        </article>
       </div>
     </section>
 
-    <!-- 5. Contact -->
-    <section class="contact" id="contact">
-      <p class="contact-kicker">Looking for a finance internship from 7 January 2027.</p>
-      <a class="talk magnetic" href="mailto:warrenbaow@gmail.com?subject=Internship%20for%20Warren%20Bao"><span>Let's talk</span></a>
-      <ul class="links">
-        <li><span>Email</span><a href="mailto:warrenbaow@gmail.com">warrenbaow@gmail.com</a></li>
-        <li><span>LinkedIn</span><a href="https://www.linkedin.com/in/warren-bao/" target="_blank" rel="noopener">warren-bao</a></li>
-        <li><span>Phone</span><a href="tel:+639175688678">0917 568 8678</a></li>
-        <li><span>Résumé</span><a href="Warren-Bao-Resume.pdf" target="_blank" rel="noopener">Open PDF</a></li>
-      </ul>
+    <!-- 04 Leadership -->
+    <section class="screen" id="lead">
+      <header class="sec-head"><p class="mono tag">04 / Leadership</p><h2 data-scramble-h>Orgs and competitions</h2></header>
+      <div class="dash dash-lead">
+        <article class="panel glass tilt span-2 nfc">
+          <div class="p-top"><p class="p-label mono">National Finance Congress</p><p class="pill mono">Jul 2026</p></div>
+          <div class="badge" aria-hidden="true"><svg viewBox="0 0 100 100"><polygon points="50,4 93,27 93,73 50,96 7,73 7,27"/><polygon class="in" points="50,16 82,33 82,67 50,84 18,67 18,33"/></svg><b>F</b></div>
+          <h3>Case competition finalist</h3>
+          <p class="p-body">Built the valuation for a live company case and defended it in front of industry judges.</p>
+        </article>
+        <article class="panel glass tilt span-2">
+          <div class="p-top"><p class="p-label mono">DLSU JEMA</p><p class="pill mono">2024 – now</p></div>
+          <h3>AVP for Documentation</h3>
+          <div class="steps mono"><span>JEMA Elite</span><i></i><span class="on">AVP</span></div>
+          <p class="p-body">Promoted from JEMA Elite for Internal Relations.</p>
+        </article>
+        <article class="panel glass tilt">
+          <p class="p-label mono">DLSU MaFIA</p>
+          <h3>Junior Officer</h3>
+          <div class="bars">
+            <div><span class="mono">Reports checked</span><i style="--w:100"></i><b>8</b></div>
+            <div><span class="mono">Events filed on time</span><i style="--w:75"></i><b>6</b></div>
+          </div>
+        </article>
+        <article class="panel glass tilt">
+          <p class="p-label mono">DLSU ENGLICOM</p>
+          <h3>Coordinator</h3>
+          <div class="bars">
+            <div><span class="mono">Events led</span><i style="--w:100"></i><b>5</b></div>
+            <div><span class="mono">Members trained</span><i style="--w:60"></i><b>3</b></div>
+          </div>
+        </article>
+        <article class="panel glass tilt">
+          <p class="p-label mono">Medical Mission</p>
+          <h3>Fundraising</h3>
+          <p class="delta"><b data-count="25" data-prefix="−" data-suffix="%">−25%</b><span class="mono">₱4,000 to ₱3,000 event cost</span></p>
+        </article>
+        <article class="panel glass tilt">
+          <p class="p-label mono">ABM Business Fair</p>
+          <h3>Venture lead</h3>
+          <p class="delta up"><b data-count="40" data-prefix="₱" data-suffix="K">₱40K</b><span class="mono">profit, top 2 in campus sales</span></p>
+        </article>
+      </div>
+    </section>
+
+    <!-- 05 Skills -->
+    <section class="screen" id="skills">
+      <header class="sec-head"><p class="mono tag">05 / Skills</p><h2 data-scramble-h>Toolkit</h2></header>
+      <div class="dash dash-skills">
+        <article class="panel glass tilt span-2">
+          <p class="p-label mono">Languages</p>
+          <div class="lang">
+            <div><span>English</span><i style="--w:100"></i><em class="mono">Fluent</em></div>
+            <div><span>Filipino</span><i style="--w:100"></i><em class="mono">Fluent</em></div>
+            <div><span>Hokkien</span><i style="--w:100"></i><em class="mono">Fluent</em></div>
+            <div><span>Mandarin</span><i style="--w:60"></i><em class="mono">Intermediate</em></div>
+          </div>
+        </article>
+        <article class="panel glass tilt span-2">
+          <p class="p-label mono">Tools</p>
+          <ul class="chips big"><li>Excel modeling</li><li>Google Sheets</li><li>R Studio</li><li>MS Office</li><li>Google Workspace</li><li>HTML</li><li>Generative AI</li></ul>
+        </article>
+        <article class="panel glass tilt span-2">
+          <p class="p-label mono">Analysis</p>
+          <ul class="chips big"><li>Financial analysis</li><li>Credit and transaction review</li><li>Reconciliation</li><li>Data-driven decisions</li></ul>
+        </article>
+        <article class="panel glass tilt span-2">
+          <p class="p-label mono">Coursework</p>
+          <ul class="chips big"><li>Financial Management</li><li>Financial Accounting</li><li>Business Statistics</li></ul>
+        </article>
+      </div>
+    </section>
+
+    <!-- 06 Gallery: pictures slide side to side -->
+    <section class="screen gallery" id="gallery" aria-label="Photos">
+      <header class="sec-head"><p class="mono tag">06 / Field log</p><h2 data-scramble-h>Moments</h2></header>
+      <div class="reel" data-reel>
+        <div class="track">
+          <img src="images/aisun-expo.webp" alt="Aisun Solar expo booth" width="440" height="558" loading="lazy">
+          <img src="images/nfc-finalists.webp" alt="NFC finalists" width="332" height="238" loading="lazy">
+          <img src="images/jema-assembly.webp" alt="JEMA general assembly" width="770" height="502" loading="lazy">
+          <img src="images/englicom.webp" alt="ENGLICOM org fair" width="770" height="436" loading="lazy">
+          <img src="images/abm-fair.webp" alt="ABM Business Fair booth" width="430" height="524" loading="lazy">
+          <img src="images/fusion.webp" alt="Fusion event team" width="542" height="360" loading="lazy">
+          <img src="images/aaa-site.webp" alt="AAA Worldwide project site" width="800" height="599" loading="lazy">
+        </div>
+      </div>
+      <div class="reel reverse" data-reel>
+        <div class="track">
+          <img src="images/englicom.webp" alt="" width="770" height="436" loading="lazy">
+          <img src="images/aaa-site.webp" alt="" width="800" height="599" loading="lazy">
+          <img src="images/abm-fair.webp" alt="" width="430" height="524" loading="lazy">
+          <img src="images/aisun-expo.webp" alt="" width="440" height="558" loading="lazy">
+          <img src="images/fusion.webp" alt="" width="542" height="360" loading="lazy">
+          <img src="images/jema-assembly.webp" alt="" width="770" height="502" loading="lazy">
+          <img src="images/nfc-finalists.webp" alt="" width="332" height="238" loading="lazy">
+        </div>
+      </div>
+    </section>
+
+    <!-- 07 Contact -->
+    <section class="screen contact" id="contact">
+      <div class="console glass">
+        <div class="console-bar mono"><i></i><i></i><i></i><span>contact.sh</span></div>
+        <div class="console-body">
+          <p class="mono dim">&gt; open_to</p>
+          <p class="mono">finance internship, Philippines, from 07.01.2027</p>
+          <h2 class="talk" data-scramble-h>Let's talk.</h2>
+          <ul class="c-links">
+            <li><span class="mono">Email</span><a href="mailto:warrenbaow@gmail.com">warrenbaow@gmail.com</a><button type="button" class="copy mono" data-copy="warrenbaow@gmail.com">Copy</button></li>
+            <li><span class="mono">LinkedIn</span><a href="https://www.linkedin.com/in/warren-bao/" target="_blank" rel="noopener">linkedin.com/in/warren-bao</a></li>
+            <li><span class="mono">Phone</span><a href="tel:+639175688678">0917 568 8678</a></li>
+            <li><span class="mono">Résumé</span><a href="Warren-Bao-Resume.pdf" target="_blank" rel="noopener">Open PDF</a></li>
+          </ul>
+        </div>
+      </div>
+      <p class="foot mono">WB/OS v3.0 · Manila · 2026</p>
     </section>
   </main>
 
   <script src="js/vendor/three.min.js" defer></script>
   <script src="js/vendor/gsap.min.js" defer></script>
   <script src="js/vendor/ScrollTrigger.min.js" defer></script>
-  <script src="js/field.js" defer></script>
+  <script src="js/core.js" defer></script>
   <script src="js/site.js" defer></script>
 </body>
 </html>
