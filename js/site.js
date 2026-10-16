@@ -86,13 +86,77 @@
     });
   }
 
+
+  /* Hanging ID badge: a rope with a weight. It drops in, swings, follows a drag and flips on click. */
+  const lan = $("[data-lanyard]");
+  if (lan) {
+    const card = $("[data-badge]", lan), path = $("[data-strap-path]", lan), edge = $("[data-strap-edge]", lan);
+    // a tiny QR-like pattern for the back
+    const qr = $("[data-qr]", lan);
+    if (qr) { let s = 2027; qr.innerHTML = Array.from({ length: 144 }, (_, i) => { s = (s * 9301 + 49297) % 233280; const r = i % 12, c = (i / 12) | 0; const finder = (r < 3 && c < 3) || (r > 8 && c < 3) || (r < 3 && c > 8); return `<i class="${finder || s / 233280 > 0.5 ? "" : "o"}"></i>`; }).join(""); }
+
+    let A = { x: 0, y: 0 }, L = 300, W = 300;
+    const p = { x: 0, y: 0 }, prev = { x: 0, y: 0 };
+    let drag = null, ang = 0, angV = 0, moved = 0;
+    const layout = () => {
+      const r = lan.getBoundingClientRect();
+      W = card.offsetWidth;
+      A = { x: r.width * (innerWidth < 860 ? 0.5 : 0.56), y: innerWidth < 860 ? -8 : -40 };
+      L = innerWidth < 860 ? 90 : Math.max(200, Math.min(r.height * 0.36, 300));
+    };
+    layout();
+    // start above the screen with a little sideways push so it lands with a swing
+    p.x = A.x + 60; p.y = A.y - 260; prev.x = p.x - 6; prev.y = p.y;
+    if (calm) { p.x = A.x; p.y = A.y + L; prev.x = p.x; prev.y = p.y; }
+    addEventListener("resize", () => { layout(); });
+
+    const local = (e) => { const r = lan.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
+    card.addEventListener("pointerdown", (e) => {
+      const q = local(e); drag = { dx: p.x - q.x, dy: p.y - q.y, x: q.x, y: q.y }; moved = 0;
+      card.setPointerCapture(e.pointerId);
+    });
+    card.addEventListener("pointermove", (e) => { if (!drag) return; const q = local(e); moved += Math.abs(q.x - drag.x) + Math.abs(q.y - drag.y); drag.x = q.x; drag.y = q.y; });
+    const release = () => { if (drag && moved < 6) card.classList.toggle("flipped"); drag = null; };
+    card.addEventListener("pointerup", release);
+    card.addEventListener("pointercancel", () => (drag = null));
+    card.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); card.classList.toggle("flipped"); } });
+
+    let last = performance.now();
+    const step = (now) => {
+      requestAnimationFrame(step);
+      const dt = Math.min(1 / 30, (now - last) / 1000); last = now;
+      if (drag) {
+        const tx = drag.x + drag.dx, ty = drag.y + drag.dy;
+        prev.x = p.x; prev.y = p.y;
+        p.x += (tx - p.x) * 0.35; p.y += (ty - p.y) * 0.35;
+      } else if (!calm) {
+        const vx = (p.x - prev.x) * 0.975, vy = (p.y - prev.y) * 0.975;
+        prev.x = p.x; prev.y = p.y;
+        p.x += vx; p.y += vy + 2400 * dt * dt;
+      }
+      // the strap does not stretch past its length
+      let dx = p.x - A.x, dy = p.y - A.y, d = Math.hypot(dx, dy);
+      if (d > L) { const k = L / d; p.x = A.x + dx * k; p.y = A.y + dy * k; dx = p.x - A.x; dy = p.y - A.y; d = L; }
+      // card leans along the strap, with a little lag so it swings
+      const target = -Math.atan2(dx, Math.max(1, dy));
+      angV += (target - ang) * 0.18; angV *= 0.78; ang += angV;
+      const vx = p.x - prev.x;
+      card.style.transform = `translate(${p.x - W / 2}px, ${p.y}px) rotate(${ang}rad) rotateY(${Math.max(-25, Math.min(25, vx * 1.6))}deg)`;
+      // strap: straight when taut, sags when slack
+      const slack = Math.max(0, L - d);
+      const mx = (A.x + p.x) / 2 + slack * 0.25, my = (A.y + p.y) / 2 + slack * 0.6;
+      const dpath = `M${A.x},${A.y} Q${mx},${my} ${p.x},${p.y - 10}`;
+      path.setAttribute("d", dpath); edge.setAttribute("d", dpath);
+    };
+    requestAnimationFrame(step);
+  }
+
   const { gsap, ScrollTrigger } = window;
   if (!gsap || !ScrollTrigger || calm) return;
   gsap.registerPlugin(ScrollTrigger);
 
   /* Hero */
   gsap.from(".lede, .cta-row", { y: 24, opacity: 0, duration: 1, ease: "expo.out", stagger: 0.1, delay: 0.9 });
-  gsap.from(".id-card", { y: 60, rotateY: -18, opacity: 0, duration: 1.4, ease: "expo.out", delay: 0.4 });
   gsap.from(".top", { y: -30, opacity: 0, duration: 1, ease: "expo.out", delay: 0.2 });
 
   /* Section headings decode as they arrive */

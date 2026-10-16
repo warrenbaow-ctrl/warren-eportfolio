@@ -53,17 +53,35 @@
         </div>
       </div>
 
-      <aside class="id-card glass tilt" aria-label="Profile card">
-        <div class="id-head mono"><span>OPERATOR PROFILE</span><span class="live"><i></i>ONLINE</span></div>
-        <div class="id-photo"><img src="images/portrait.webp" width="900" height="1124" alt="Portrait of Warren Bao"><span class="scan"></span><span class="corner c1"></span><span class="corner c2"></span><span class="corner c3"></span><span class="corner c4"></span></div>
-        <dl class="id-data mono">
-          <div><dt>Name</dt><dd>Warren M. Bao</dd></div>
-          <div><dt>Degree</dt><dd>BS Mgmt. of Financial Institutions</dd></div>
-          <div><dt>School</dt><dd>De La Salle University</dd></div>
-          <div><dt>Base</dt><dd>Binondo, Manila</dd></div>
-          <div><dt>Status</dt><dd class="ok">Available 07.01.2027</dd></div>
-        </dl>
-      </aside>
+      <!-- Hanging ID badge: drops in on load, swings, can be dragged and flipped -->
+      <div class="lanyard" data-lanyard>
+        <svg class="strap" aria-hidden="true"><path data-strap-path/><path class="strap-edge" data-strap-edge/></svg>
+        <div class="badge" data-badge role="button" tabindex="0" aria-label="ID badge for Warren Bao. Press to flip.">
+          <span class="clip" aria-hidden="true"><i></i></span>
+          <div class="badge-flip">
+            <div class="face front">
+              <div class="b-top mono"><span>WB/OS · ID</span><span class="live"><i></i>ACTIVE</span></div>
+              <div class="b-photo"><img src="images/portrait.webp" width="900" height="1124" alt="Portrait of Warren Bao"><span class="scan"></span></div>
+              <p class="b-name">Warren M. Bao</p>
+              <p class="b-role mono">Finance student · DLSU</p>
+              <div class="b-foot mono"><span>ID 2027-MFI</span><span class="bars-code" aria-hidden="true"></span></div>
+            </div>
+            <div class="face back">
+              <div class="b-top mono"><span>CREDENTIALS</span><span>02</span></div>
+              <dl class="b-data mono">
+                <div><dt>Degree</dt><dd>BS Mgmt. of Financial Inst.</dd></div>
+                <div><dt>School</dt><dd>De La Salle University</dd></div>
+                <div><dt>Class</dt><dd>2027</dd></div>
+                <div><dt>Base</dt><dd>Binondo, Manila</dd></div>
+                <div><dt>Langs</dt><dd>EN · FIL · HOK · ZH</dd></div>
+                <div><dt>Status</dt><dd class="ok">Available 07.01.2027</dd></div>
+              </dl>
+              <div class="b-qr" aria-hidden="true" data-qr></div>
+            </div>
+          </div>
+        </div>
+        <p class="badge-hint mono" aria-hidden="true">drag me · click to flip</p>
+      </div>
       <p class="scroll-cue mono" aria-hidden="true"><span></span>scroll</p>
     </section>
 

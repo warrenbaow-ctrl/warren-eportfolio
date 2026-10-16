@@ -102,28 +102,8 @@ main, .top, .rail { position: relative; z-index: 2; }
 .scroll-cue span::after { content: ""; position: absolute; left: 0; top: -40%; width: 100%; height: 40%; background: var(--signal); animation: cue 1.8s var(--ease) infinite; }
 @keyframes cue { to { top: 100%; } }
 
-.id-card { border-radius: var(--r); padding: 16px; justify-self: end; width: min(100%, 400px); transform-style: preserve-3d; }
-.id-head { display: flex; justify-content: space-between; font-size: 11px; color: var(--ink-2); padding: 2px 4px 12px; }
-.live { display: inline-flex; align-items: center; gap: 6px; color: #12a150; }
-.live i { width: 7px; height: 7px; border-radius: 50%; background: currentColor; animation: blink 1.6s ease-in-out infinite; }
-@keyframes blink { 50% { opacity: 0.3; } }
-.id-photo { position: relative; aspect-ratio: 1 / 1; border-radius: 14px; overflow: hidden; background: #0b0f18; }
-.id-photo img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 18%; }
-.scan { position: absolute; left: 0; right: 0; height: 30%; top: -30%; background: linear-gradient(to bottom, transparent, rgba(255, 91, 31, 0.28), transparent); animation: scan 3.2s linear infinite; }
-@keyframes scan { to { top: 100%; } }
-.corner { position: absolute; width: 18px; height: 18px; border: 2px solid var(--signal); }
-.c1 { top: 10px; left: 10px; border-right: 0; border-bottom: 0; }
-.c2 { top: 10px; right: 10px; border-left: 0; border-bottom: 0; }
-.c3 { bottom: 10px; left: 10px; border-right: 0; border-top: 0; }
-.c4 { bottom: 10px; right: 10px; border-left: 0; border-top: 0; }
-.id-data { display: grid; margin-top: 12px; font-size: 12.5px; }
-.id-data div { display: flex; justify-content: space-between; gap: 12px; padding: 8px 4px; border-top: 1px solid var(--hair); }
-.id-data dt { color: var(--ink-3); }
-.id-data dd { text-align: right; }
-.id-data .ok { color: var(--signal); font-weight: 600; }
 @media (max-width: 860px) {
   .hero { grid-template-columns: 1fr; padding-top: 110px; }
-  .id-card { justify-self: start; }
   .scroll-cue { display: none; }
 }
 
@@ -257,3 +237,48 @@ main, .top, .rail { position: relative; z-index: 2; }
 @media (prefers-reduced-motion: reduce) {
   .orb, .scan, .live i, .badge svg, .scroll-cue span::after { animation: none; }
 }
+
+/* Hanging ID badge */
+.lanyard { position: relative; align-self: stretch; min-height: 640px; margin-top: -120px; touch-action: none; }
+.strap { position: absolute; left: 0; top: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+.strap path { fill: none; stroke-linecap: butt; }
+.strap [data-strap-path] { stroke: var(--signal); stroke-width: 22; }
+.strap .strap-edge { stroke: rgba(255, 255, 255, 0.55); stroke-width: 1.5; stroke-dasharray: 3 7; }
+.badge { position: absolute; left: 0; top: 0; width: 320px; transform-origin: 50% 0; cursor: grab; user-select: none; -webkit-user-select: none; perspective: 1200px; will-change: transform; outline: none; }
+.badge:active { cursor: grabbing; }
+.badge:focus-visible .face { outline: 2px solid var(--signal); outline-offset: 4px; }
+.clip { position: absolute; left: 50%; top: -18px; width: 46px; height: 30px; margin-left: -23px; border-radius: 8px 8px 6px 6px; background: linear-gradient(180deg, #e9edf3, #b9c1cd); box-shadow: inset 0 1px 0 #fff, 0 4px 10px -4px rgba(14, 21, 37, 0.4); z-index: 3; }
+.clip i { position: absolute; left: 50%; top: 9px; width: 22px; height: 6px; margin-left: -11px; border-radius: 4px; background: #8a93a3; }
+.badge-flip { position: relative; transform-style: preserve-3d; transition: transform 700ms cubic-bezier(0.22, 1, 0.36, 1); }
+.badge.flipped .badge-flip { transform: rotateY(180deg); }
+.face { border-radius: 22px; padding: 16px; background: rgba(255, 255, 255, 0.62); -webkit-backdrop-filter: blur(22px) saturate(180%); backdrop-filter: blur(22px) saturate(180%); border: 1px solid rgba(255, 255, 255, 0.95); box-shadow: inset 0 1px 0 #fff, 0 30px 60px -24px rgba(14, 21, 37, 0.38); -webkit-backface-visibility: hidden; backface-visibility: hidden; }
+.face::before { content: ""; position: absolute; left: 50%; top: 10px; width: 54px; height: 8px; margin-left: -27px; border-radius: 8px; background: rgba(14, 21, 37, 0.1); }
+.back { position: absolute; inset: 0; transform: rotateY(180deg); display: flex; flex-direction: column; }
+.b-top { display: flex; justify-content: space-between; font-size: 10.5px; color: var(--ink-2); padding: 16px 2px 12px; }
+.b-photo { position: relative; aspect-ratio: 1 / 1.05; border-radius: 14px; overflow: hidden; background: #0b0f18; }
+.b-photo img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 18%; pointer-events: none; }
+.b-name { font: 600 28px/1 var(--display); margin-top: 14px; letter-spacing: -0.005em; }
+.b-role { font-size: 11.5px; color: var(--signal); margin-top: 6px; }
+.b-foot { display: flex; justify-content: space-between; align-items: center; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--hair); font-size: 10.5px; color: var(--ink-3); }
+.bars-code { width: 96px; height: 22px; background: repeating-linear-gradient(90deg, var(--ink) 0 2px, transparent 2px 4px, var(--ink) 4px 5px, transparent 5px 8px, var(--ink) 8px 11px, transparent 11px 13px); opacity: 0.8; }
+.b-data { display: grid; font-size: 11.5px; }
+.b-data div { display: flex; justify-content: space-between; gap: 10px; padding: 8px 2px; border-top: 1px solid var(--hair); }
+.b-data dt { color: var(--ink-3); }
+.b-data dd { text-align: right; }
+.b-data .ok { color: var(--signal); font-weight: 600; }
+.b-qr { margin: auto auto 4px; width: 96px; height: 96px; display: grid; grid-template-columns: repeat(12, 1fr); gap: 1px; padding: 6px; background: #fff; border-radius: 8px; }
+.b-qr i { background: var(--ink); border-radius: 1px; }
+.b-qr i.o { background: transparent; }
+.badge-hint { position: absolute; right: 8%; bottom: 4px; font-size: 11px; color: var(--ink-3); }
+.badge .live { display: inline-flex; align-items: center; gap: 6px; color: #12a150; }
+.badge .live i { width: 7px; height: 7px; border-radius: 50%; background: currentColor; animation: blink 1.6s ease-in-out infinite; }
+@media (max-width: 860px) {
+  .lanyard { min-height: 520px; margin-top: 8px; }
+  .badge { width: 250px; }
+  .b-name { font-size: 24px; }
+  .badge-hint { left: 0; right: auto; }
+}
+.scan { position: absolute; left: 0; right: 0; height: 30%; top: -30%; background: linear-gradient(to bottom, transparent, rgba(255, 91, 31, 0.28), transparent); animation: scan 3.2s linear infinite; pointer-events: none; }
+@keyframes scan { to { top: 100%; } }
+@keyframes blink { 50% { opacity: 0.3; } }
+@media (prefers-reduced-motion: reduce) { .scan, .badge .live i { animation: none; } }
