@@ -21,8 +21,8 @@
 
 * { box-sizing: border-box; }
 html { background: var(--night); -webkit-text-size-adjust: 100%; }
-html.lenis, html.lenis body { height: auto; }
-.lenis.lenis-smooth { scroll-behavior: auto !important; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
 body { margin: 0; background: var(--night); color: var(--paper); font: 400 17px/1.55 var(--text); -webkit-font-smoothing: antialiased; overflow-x: hidden; }
 img { display: block; max-width: 100%; }
 h1, h2, p, figure, ul { margin: 0; }
@@ -114,4 +114,20 @@ main, .bar { position: relative; z-index: 1; }
 
 @media (prefers-reduced-motion: reduce) {
   .status i { animation: none; }
+}
+
+/* Photo wall: snapshots scattered on the night, they settle as you arrive and lift when you point */
+.wall { position: relative; padding: 10vh var(--m) 14vh; background: var(--night); }
+.wall-h { font: 600 clamp(30px, 4.6vw, 76px)/1.02 var(--display); letter-spacing: -0.035em; margin-bottom: 6vh; }
+.wall-board { position: relative; height: clamp(560px, 62vw, 900px); }
+.snap { position: absolute; left: var(--x); top: var(--y); width: var(--w); margin: 0; padding: 10px 10px 36px; background: var(--paper); color: var(--night); border-radius: 3px; transform: rotate(var(--r)); box-shadow: 0 30px 60px -20px rgba(0, 0, 0, 0.7); transition: transform 380ms var(--ease), box-shadow 380ms var(--ease); cursor: default; }
+.snap img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 1px; }
+.snap figcaption { position: absolute; left: 12px; right: 12px; bottom: 10px; font: 500 13px var(--display); letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (hover: hover) and (pointer: fine) {
+  .snap:hover { transform: rotate(0deg) scale(1.08); z-index: 5; box-shadow: 0 40px 80px -20px rgba(0, 0, 0, 0.85); }
+}
+@media (max-width: 760px) {
+  .wall-board { height: auto; display: grid; grid-template-columns: 1fr 1fr; gap: 18px 14px; }
+  .snap { position: relative; left: auto; top: auto; width: auto; padding: 6px 6px 28px; }
+  .snap figcaption { font-size: 11px; bottom: 8px; left: 8px; }
 }

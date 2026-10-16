@@ -191,11 +191,9 @@
 
   const start = () => {
     build();
-    let last = performance.now(), visible = true, t = 0;
-    document.addEventListener("visibilitychange", () => { visible = !document.hidden; });
+    let last = performance.now(), t = 0;
     const loop = (now) => {
       requestAnimationFrame(loop);
-      if (!visible) return;
       const dt = Math.min(0.05, (now - last) / 1000); last = now;
       if (!calm) t += dt;
       if (state.intro > 0) state.intro = Math.max(0, state.intro - dt / 2.4);
@@ -218,5 +216,8 @@
   window.WBField = { set(t1, t2) { state.t1 = t1; state.t2 = t2; } };
 
   const ready = document.fonts && document.fonts.load ? document.fonts.load('800 100px "Unbounded"') : Promise.resolve();
-  Promise.race([ready, new Promise((r) => setTimeout(r, 1500))]).then(start);
+  let started = false;
+  const go = () => { if (!started) { started = true; start(); } };
+  Promise.resolve(ready).catch(() => {}).then(go);
+  setTimeout(go, 1500);
 })();

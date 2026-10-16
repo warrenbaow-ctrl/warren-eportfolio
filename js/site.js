@@ -2,21 +2,9 @@
   "use strict";
   const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
   const calm = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const { gsap, ScrollTrigger, Lenis } = window;
+  const { gsap, ScrollTrigger } = window;
   if (!gsap || !ScrollTrigger) return; // page still reads fine without motion
   gsap.registerPlugin(ScrollTrigger);
-
-  /* Smooth scroll, driven by GSAP's clock so the field and the text move together */
-  if (Lenis && !calm) {
-    const lenis = new Lenis({ lerp: 0.1, smoothWheel: true });
-    lenis.on("scroll", ScrollTrigger.update);
-    gsap.ticker.add((t) => lenis.raf(t * 1000));
-    gsap.ticker.lagSmoothing(0);
-    $$('a[href^="#"]').forEach((a) => a.addEventListener("click", (e) => {
-      const target = document.querySelector(a.getAttribute("href"));
-      if (target) { e.preventDefault(); lenis.scrollTo(target, { duration: 1.4 }); }
-    }));
-  }
 
   /* Split text into words that rise from a mask */
   $$("[data-split]").forEach((el) => {
@@ -66,6 +54,12 @@
     gsap.from(el, { y: 24, opacity: 0, duration: 1, ease: "expo.out", scrollTrigger: { trigger: el, start: "top 90%" } });
   });
   gsap.from(".talk", { scale: 0.85, opacity: 0, duration: 1.2, ease: "expo.out", scrollTrigger: { trigger: ".contact", start: "top 70%" } });
+
+  /* Photo wall: each snapshot flies in from off its spot and lands */
+  $$(".snap").forEach((el, i) => {
+    gsap.from(el, { x: (i % 2 ? 1 : -1) * (120 + i * 30), y: 160, rotation: (i % 2 ? 18 : -18), opacity: 0, duration: 1.3, ease: "expo.out", delay: i * 0.08,
+      scrollTrigger: { trigger: ".wall-board", start: "top 80%" }, clearProps: "transform" });
+  });
 
   /* Magnetic buttons */
   if (window.matchMedia("(hover: hover) and (pointer: fine)").matches) {
