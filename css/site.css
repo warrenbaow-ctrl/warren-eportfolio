@@ -460,3 +460,4 @@ main, .top, .rail { position: relative; z-index: 2; }
 /* Third photo row */
 .reel.slow .track img { height: clamp(150px, 20vw, 250px); }
 @media (max-width: 640px) { .reel.slow .track img { height: 150px; } }
+.hexmark .trophy { position: relative; inset: auto; width: 46%; height: 46%; fill: none; stroke: var(--signal); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; animation: none; }
