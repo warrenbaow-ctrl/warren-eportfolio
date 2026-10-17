@@ -457,3 +457,6 @@ main, .top, .rail { position: relative; z-index: 2; }
   .flow .f-out { display: flex; flex-wrap: wrap; gap: 6px; }
   .flow .f-out b { font-size: 12px; padding: 6px 10px 6px 8px; }
 }
+/* Third photo row */
+.reel.slow .track img { height: clamp(150px, 20vw, 250px); }
+@media (max-width: 640px) { .reel.slow .track img { height: 150px; } }

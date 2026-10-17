@@ -206,7 +206,8 @@
     const track = $(".track", reel);
     track.innerHTML += track.innerHTML; // duplicate for a seamless loop
     const dir = reel.classList.contains("reverse") ? 1 : -1;
-    const tween = gsap.fromTo(track, { xPercent: dir < 0 ? 0 : -50 }, { xPercent: dir < 0 ? -50 : 0, duration: dir < 0 ? 40 : 46, ease: "none", repeat: -1 });
+    const tween = gsap.fromTo(track, { xPercent: dir < 0 ? 0 : -50 }, { xPercent: dir < 0 ? -50 : 0, duration: reel.classList.contains("slow") ? 70 : dir < 0 ? 55 : 62, ease: "none", repeat: -1 });
+    track.querySelectorAll("img").forEach((im, i) => { if (i >= track.children.length / 2) { im.alt = ""; im.setAttribute("aria-hidden", "true"); } im.loading = "eager"; });
     ScrollTrigger.create({ trigger: reel, start: "top bottom", end: "bottom top", onUpdate: (s) => {
       const v = Math.min(4, 1 + Math.abs(s.getVelocity()) / 600);
       gsap.to(tween, { timeScale: v, duration: 0.2, overwrite: true, onComplete: () => gsap.to(tween, { timeScale: 1, duration: 1.2 }) });
