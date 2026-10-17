@@ -20,6 +20,21 @@
     setTimeout(() => { b.textContent = "Copy"; b.classList.remove("done"); }, 1800);
   }));
 
+
+  /* Story sheets: the corner button opens the story behind each card */
+  $$("[data-story]").forEach((btn) => {
+    const panel = btn.closest(".panel");
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const open = !panel.classList.contains("open");
+      $$(".panel.open").forEach((p) => { if (p !== panel) { p.classList.remove("open"); const b = $("[data-story]", p); b.setAttribute("aria-expanded", "false"); $("span", b).textContent = "Story"; } });
+      panel.classList.toggle("open", open);
+      btn.setAttribute("aria-expanded", String(open));
+      $("span", btn).textContent = open ? "Close" : "Story";
+    });
+  });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") $$(".panel.open [data-story]").forEach((b) => b.click()); });
+
   /* Rail and nav follow the screen in view */
   const ids = ["boot", "overview", "work", "lead", "skills", "gallery", "contact"];
   if ("IntersectionObserver" in window) {
@@ -180,6 +195,7 @@
   $$("[data-gauge]").forEach((g) => gsap.fromTo(g, { strokeDashoffset: 100 }, { strokeDashoffset: 100 - +g.dataset.gauge, duration: 1.8, ease: "power3.out", scrollTrigger: { trigger: g, start: "top 85%" } }));
   gsap.from(".g-bar, .g-dot", { scaleX: 0, duration: 1.2, ease: "expo.out", stagger: 0.08, scrollTrigger: { trigger: "[data-gantt]", start: "top 80%" } });
   gsap.from(".g-now", { scaleY: 0, transformOrigin: "top", duration: 1, ease: "expo.out", delay: 0.6, scrollTrigger: { trigger: "[data-gantt]", start: "top 80%" } });
+  gsap.from(".cm-bar i", { scaleX: 0, duration: 1.4, ease: "expo.out", scrollTrigger: { trigger: ".case-meter", start: "top 90%" } });
   gsap.from(".f-bar", { scaleX: 0, duration: 1.2, ease: "expo.out", stagger: 0.15, scrollTrigger: { trigger: ".funnel", start: "top 85%" } });
   $$(".bars i, .lang i").forEach((i) => gsap.from(i, { "--k": 0, clipPath: "inset(0 100% 0 0)", duration: 1.3, ease: "expo.out", scrollTrigger: { trigger: i, start: "top 90%" } }));
 

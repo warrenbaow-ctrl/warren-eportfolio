@@ -282,3 +282,38 @@ main, .top, .rail { position: relative; z-index: 2; }
 @keyframes scan { to { top: 100%; } }
 @keyframes blink { 50% { opacity: 0.3; } }
 @media (prefers-reduced-motion: reduce) { .scan, .badge .live i { animation: none; } }
+
+/* Overview about panel */
+.about-line { font: 600 clamp(24px, 2.4vw, 36px)/1.1 var(--display); max-width: 20ch; }
+.gpa .gauge { width: min(100%, 220px); }
+.gpa .gauge-num b { font-size: clamp(34px, 3vw, 44px); }
+
+/* Second JEMA bar sits on the same row */
+.g-row .g-bar-2 { grid-column: 2; grid-row: 1; }
+.g-row > .g-bar, .g-row > .g-dot { grid-row: 1; }
+
+/* NFC case meter */
+.case-meter { display: grid; gap: 8px; margin-top: auto; }
+.cm-bar { position: relative; height: 12px; border-radius: 99px; background: rgba(14, 21, 37, 0.07); }
+.cm-bar i { position: absolute; left: 0; top: 0; bottom: 0; width: calc(var(--w) * 1%); border-radius: inherit; background: var(--ink); transform-origin: left; }
+.cm-bar b { position: absolute; top: -6px; bottom: -6px; left: calc(var(--w) * 1%); width: 2px; background: var(--signal); }
+.cm-bar b::after { content: ""; position: absolute; top: -4px; left: -4px; width: 10px; height: 10px; border-radius: 50%; background: var(--signal); box-shadow: 0 0 0 4px rgba(255, 91, 31, 0.2); }
+.cm-legend { display: flex; justify-content: space-between; font-size: 11px; color: var(--ink-3); }
+.cm-legend strong { color: var(--ink); font-weight: 600; }
+.cm-bar { width: 100%; }
+
+/* Stories: a glass sheet that opens from the corner button */
+.has-story { padding-bottom: 60px; }
+.story-btn { position: absolute; right: 14px; bottom: 14px; z-index: 3; display: inline-flex; align-items: center; gap: 8px; height: 34px; padding: 0 8px 0 14px; border: 0; border-radius: 999px; background: var(--ink); color: #fff; font-size: 12px; cursor: pointer; transition: background-color 200ms ease, transform 140ms var(--ease); }
+.story-btn i { display: grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: var(--signal); font-style: normal; font-size: 15px; line-height: 1; transition: transform 400ms var(--ease); }
+.story-btn:hover { background: var(--signal); }
+.story-btn:hover i { background: #fff; color: var(--signal); }
+.story-btn:active { transform: scale(0.96); }
+.story { position: absolute; inset: 0; z-index: 2; padding: 22px 22px 60px; display: flex; align-items: flex-end; border-radius: inherit; background: #121a2c; color: #fff; clip-path: circle(0 at calc(100% - 40px) calc(100% - 31px)); transition: clip-path 650ms cubic-bezier(0.65, 0, 0.35, 1); overflow: auto; }
+.story p { font-size: clamp(15px, 1.15vw, 17px); line-height: 1.55; max-width: 52ch; opacity: 0; transform: translateY(10px); transition: opacity 300ms ease, transform 400ms var(--ease); }
+.story::before { content: "Story"; position: absolute; top: 20px; left: 22px; font: 500 11px var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--signal); }
+.panel.open .story { clip-path: circle(150% at calc(100% - 40px) calc(100% - 31px)); }
+.panel.open .story p { opacity: 1; transform: none; transition-delay: 220ms; }
+.panel.open .story-btn { background: #fff; color: var(--ink); }
+.panel.open .story-btn i { transform: rotate(45deg); }
+@media (prefers-reduced-motion: reduce) { .story { transition: none; } .story p { transition: none; } }
