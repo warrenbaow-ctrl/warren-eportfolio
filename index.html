@@ -42,6 +42,14 @@
     <li data-rail="boot">01</li><li data-rail="overview">02</li><li data-rail="work">03</li><li data-rail="lead">04</li><li data-rail="skills">05</li><li data-rail="gallery">06</li><li data-rail="contact">07</li>
   </ol>
 
+  <nav class="dock glass" aria-label="Sections">
+    <a href="#boot" data-dock="boot"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11l8-7 8 7v9h-5v-6H9v6H4z"/></svg><span>Home</span></a>
+    <a href="#overview" data-dock="overview"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="7" height="7" rx="2"/><rect x="13" y="4" width="7" height="7" rx="2"/><rect x="4" y="13" width="7" height="7" rx="2"/><rect x="13" y="13" width="7" height="7" rx="2"/></svg><span>Profile</span></a>
+    <a href="#work" data-dock="work"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19h16M7 16V9M12 16V5M17 16v-4"/></svg><span>Work</span></a>
+    <a href="#lead" data-dock="lead"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2.6 5.4 5.9.8-4.3 4.1 1 5.8L12 16.4 6.8 19.1l1-5.8L3.5 9.2l5.9-.8z"/></svg><span>Lead</span></a>
+    <a href="#contact" data-dock="contact"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16v12H4z"/><path d="M4 7l8 6 8-6"/></svg><span>Contact</span></a>
+  </nav>
+
   <main>
     <!-- 01 Boot -->
     <section class="screen hero" id="boot">
@@ -115,8 +123,8 @@
         <article class="panel glass tilt span-2">
           <p class="p-label mono">Best results</p>
           <ul class="mini-stats">
-            <li><b data-count="42" data-suffix="%">42%</b><span>of trade-show leads I sourced became accounts</span></li>
-            <li><b>Finalist</b><span>out of 16 teams, National Finance Congress 2026</span></li>
+            <li><b data-count="42" data-suffix="%">42%</b><span>of the leads I sourced became accounts</span></li>
+            <li><b>Finalist</b><span>out of 16 teams at NFC 2026</span></li>
             <li><b data-count="40" data-prefix="₱" data-suffix="K">₱40K</b><span>profit, top 2 in campus sales</span></li>
           </ul>
         </article>
@@ -211,13 +219,15 @@
           <button type="button" class="story-btn mono" data-story aria-expanded="false"><span>Story</span><i aria-hidden="true">+</i></button>
           <div class="story" role="region" aria-label="Story"><p>I checked event financial reports against the actual expenses and receipts, and fixed the errors before they were submitted.</p></div>
         </article>
-        <article class="panel glass tilt">
+        <article class="panel glass tilt has-story">
           <p class="p-label mono">DLSU ENGLICOM</p>
           <h3>Coordinator</h3>
           <div class="bars">
             <div><span class="mono">Events led</span><i style="--w:100"></i><b>5</b></div>
             <div><span class="mono">Members trained</span><i style="--w:60"></i><b>3</b></div>
           </div>
+                  <button type="button" class="story-btn mono" data-story aria-expanded="false"><span>Story</span><i aria-hidden="true">+</i></button>
+          <div class="story" role="region" aria-label="Story"><p>I was a committee coordinator for socials and culturals from my first year. I led org events from planning to the day itself, ran booths at university-wide events, and trained new members in documentation and event work.</p></div>
         </article>
         <article class="panel glass tilt has-story">
           <p class="p-label mono">Medical Mission</p>

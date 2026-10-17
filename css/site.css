@@ -329,3 +329,90 @@ main, .top, .rail { position: relative; z-index: 2; }
 }
 .twin .wide { grid-column: 1 / -1; grid-template-columns: auto 1fr; align-items: center; column-gap: 14px; }
 .twin .txt { font-size: clamp(24px, 2.2vw, 32px); }
+
+/* ---------- Phone version ---------- */
+.dock { display: none; }
+@media (max-width: 900px) {
+  /* Bottom dock replaces the top links */
+  .dock { position: fixed; z-index: 40; left: 50%; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); display: flex; gap: 2px; padding: 6px; border-radius: 22px; }
+  .dock a { display: grid; justify-items: center; gap: 3px; min-width: 58px; padding: 7px 6px 6px; border-radius: 16px; text-decoration: none; color: var(--ink-3); font: 500 11px var(--text); transition: background-color 200ms ease, color 200ms ease; }
+  .dock svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .dock a.on { background: var(--ink); color: #fff; }
+  .dock a.on svg { stroke: var(--signal); }
+  .dock a:active { transform: scale(0.95); }
+  body { padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px)); }
+  .top { top: 10px; padding: 8px 10px 8px 14px; }
+  .core { opacity: 0.45; }
+  .grid-bg { opacity: 0.6; }
+}
+@media (max-width: 640px) {
+  /* Tighter screens */
+  .screen { min-height: 0; padding: 92px 16px 40px; }
+  .sec-head { margin-bottom: 18px; gap: 10px; }
+  .sec-head h2 { font-size: 32px; }
+  .dash { gap: 12px; }
+  .panel { padding: 18px; border-radius: 18px; }
+  .has-story { padding-bottom: 56px; }
+
+  /* Hero: name, line, buttons, then a smaller badge that peeks in */
+  .hero { padding-top: 92px; gap: 8px; }
+  .name { font-size: 22vw; }
+  .lede { margin-top: 18px; font-size: 16px; }
+  .cta-row { margin-top: 22px; }
+  .lanyard { min-height: 470px; margin-top: 0; }
+  .badge { width: 236px; }
+  .b-name { font-size: 22px; }
+  .face { padding: 12px; border-radius: 18px; }
+  .badge-hint { left: 50%; right: auto; transform: translateX(-50%); bottom: 0; }
+
+  /* Overview: small tiles sit side by side */
+  .dash-overview { grid-template-columns: 1fr 1fr; }
+  .dash-overview .about, .dash-overview .span-2 { grid-column: 1 / -1; }
+  .gpa .gauge { width: 100%; }
+  .gpa .gauge-num b { font-size: 30px; }
+  .kpi b { font-size: 64px; }
+  .about-line { font-size: 24px; }
+  .mini-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .mini-stats li { padding: 10px; }
+  .mini-stats b { font-size: 22px; }
+  .mini-stats span { font-size: 12px; line-height: 1.35; }
+
+  /* Work cards: tighter funnel */
+  .f-row { grid-template-columns: 96px 1fr; }
+  .twin b { font-size: 34px; }
+
+  /* Leadership: the four small cards become a 2 by 2 grid */
+  .dash-lead { grid-template-columns: 1fr 1fr; }
+  .dash-lead > .span-2 { grid-column: 1 / -1; }
+  .dash-lead > :not(.span-2) { padding: 14px 14px 52px; }
+  .dash-lead > :not(.span-2) h3 { font-size: 18px; }
+  .dash-lead > :not(.span-2) .p-label { font-size: 12px; }
+  .dash-lead .bars div { grid-template-columns: 1fr auto; font-size: 12px; }
+  .dash-lead .bars b { font-size: 17px; }
+  .dash-lead .delta b { font-size: 32px; }
+  .dash-lead .delta span { font-size: 12px; }
+  .dash-lead > :not(.span-2) .story-btn { right: 10px; bottom: 10px; height: 34px; padding: 0 7px 0 12px; }
+  .dash-lead > :not(.span-2) .story { padding: 16px 14px 52px; }
+  .dash-lead > :not(.span-2) .story p { font-size: 13px; }
+  .dash-lead > :not(.span-2) .story::before { top: 14px; left: 14px; }
+  .nfc .hexmark { width: 56px; height: 56px; top: 50px; right: 14px; }
+  .nfc h3, .nfc .p-body { max-width: calc(100% - 64px); }
+
+  /* Skills: two compact columns of chips */
+  .dash-skills { grid-template-columns: 1fr; }
+  .chips.big li { font-size: 14px; padding: 7px 12px; }
+
+  /* Photos: a bit shorter so both rows fit on screen */
+  .gallery .sec-head { padding-inline: 16px; }
+  .track img { height: 180px; border-width: 4px; border-radius: 14px; }
+  .reel.reverse .track img { height: 140px; }
+
+  /* Contact */
+  .contact { gap: 14px; }
+  .talk { font-size: 52px; margin: 12px 0 18px; }
+  .console-body { padding: 20px; }
+}
+@media (max-width: 370px) {
+  .dock a { min-width: 52px; font-size: 10.5px; }
+  .mini-stats { grid-template-columns: 1fr; }
+}
