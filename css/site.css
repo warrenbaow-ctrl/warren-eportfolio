@@ -163,11 +163,11 @@ main, .top, .rail { position: relative; z-index: 2; }
 .twin b { font: 600 clamp(36px, 3.4vw, 52px)/1 var(--display); }
 .twin span { font-size: 12px; color: var(--ink-3); }
 
-.badge { position: absolute; right: 18px; top: 58px; width: 74px; height: 74px; display: grid; place-items: center; }
-.badge svg { position: absolute; inset: 0; animation: spin 18s linear infinite; }
-.badge polygon { fill: none; stroke: var(--signal); stroke-width: 3; }
-.badge .in { stroke: var(--ink); stroke-width: 1.5; stroke-dasharray: 4 4; }
-.badge b { font: 600 26px var(--display); color: var(--signal); }
+.hexmark { position: absolute; right: 18px; top: 58px; width: 74px; height: 74px; display: grid; place-items: center; }
+.hexmark svg { position: absolute; inset: 0; animation: spin 18s linear infinite; }
+.hexmark polygon { fill: none; stroke: var(--signal); stroke-width: 3; }
+.hexmark .in { stroke: var(--ink); stroke-width: 1.5; stroke-dasharray: 4 4; }
+.hexmark b { font: 600 26px var(--display); color: var(--signal); }
 @keyframes spin { to { transform: rotate(360deg); } }
 .nfc h3, .nfc .p-body { max-width: calc(100% - 96px); }
 .steps { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--ink-3); }
@@ -235,7 +235,7 @@ main, .top, .rail { position: relative; z-index: 2; }
 @media (max-width: 640px) { .c-links { grid-template-columns: 1fr; } .c-links li { flex-wrap: wrap; gap: 4px 12px; } .c-links span { width: 100%; } }
 
 @media (prefers-reduced-motion: reduce) {
-  .orb, .scan, .live i, .badge svg, .scroll-cue span::after { animation: none; }
+  .orb, .scan, .live i, .hexmark svg, .scroll-cue span::after { animation: none; }
 }
 
 /* Hanging ID badge */
