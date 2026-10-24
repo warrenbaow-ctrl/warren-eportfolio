@@ -299,10 +299,10 @@ var Gals = (function () {
   }
   function norm(s) { return String(s == null ? "" : s).trim().toLowerCase().replace(/\s+/g, " "); }
   function category(v) {
-    var s = norm(v).replace(/[\s_-]/g, "");
+    var s = norm(v).replace(/[\s_.-]/g, "");
     if (!s) return "blank";
-    if (s.indexOf("nonmember") === 0 || s === "nonjema" || s === "no") return "non";
-    if (s === "member" || s.indexOf("member") === 0 || s === "jemamember" || s === "yes") return "member";
+    if (/^(no|non)/.test(s) || /notamember|nonmember|nonjema/.test(s)) return "non";
+    if (/member/.test(s) || s === "jema" || s === "yes") return "member";
     return "other";
   }
   function guessColumns(headers, rows) {
@@ -408,15 +408,22 @@ var Gals = (function () {
   }
   // Pulls GALS rows out of plain text (a GALS saved as PDF or Word). Returns a grid like a spreadsheet, or null.
   function fromText(text) {
-    var lines = String(text || "").split(/\n/), grid = [["Timestamp", "Membership Status", "ID Number", "Name", "Email Address"]];
+    var raw = String(text || "").split(/\n/), grid = [["Timestamp", "Membership Status", "ID Number", "Name", "Email Address"]];
     var stampRe = /(\d{1,2}\/\d{1,2}\/\d{4}[ ,T]+\d{1,2}:\d{2}(?::\d{2})?(?:\s*[AaPp][Mm])?)/;
+    // A row that wraps onto the next lines in a PDF is joined back into one line.
+    var lines = [];
+    raw.forEach(function (ln) {
+      if (stampRe.test(ln)) lines.push(ln);
+      else if (lines.length && ln.trim() && !/\bANM?P\b|\[PAGE|^\s*(timestamp|total)/i.test(ln) && lines[lines.length - 1].split("\n").length < 4) lines[lines.length - 1] += "\n" + ln;
+    });
     lines.forEach(function (ln) {
+      ln = ln.replace(/\n/g, " ");
       var m = ln.match(stampRe);
       if (!m) return;
       var rest = (ln.slice(0, m.index) + " " + ln.slice(m.index + m[0].length)).replace(/\|/g, " ");
       var email = (rest.match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/) || [""])[0];
       rest = rest.replace(email, " ");
-      var cat = (rest.match(/\bnon[\s-]?member\b|\bmember\b/i) || [""])[0];
+      var cat = (rest.match(/\bnon[\s-]*(?:jema[\s-]*)?member\b|\b(?:jema[\s-]*)?member\b|\bnot\s+a\s+member\b/i) || [""])[0];
       if (cat) rest = rest.replace(cat, " ");
       var id = (rest.match(/\b\d{8}\b/) || [""])[0];
       if (id) rest = rest.replace(id, " ");
@@ -1297,6 +1304,7 @@ if (typeof module !== "undefined") module.exports = { Gals: Gals, Marks: Marks, 
     if (!res) return html + '<div class="empty">' + (f.cols.time < 0 ? "Pick the Timestamp column." : "Add the event date in step 03 to check the GALS.") + "</div>";
     var w = res.written;
     html += '<div class="stats"><div><b>' + res.entries.length + "</b><span>Entries</span></div><div><b>" + res.valid.length + "</b><span>Counted</span></div><div><b>" + res.anmp + "</b><span>ANMP</span></div><div><b>" + res.anp + "</b><span>ANP</span></div></div>" +
+      '<p class="hint">Counted: ' + res.anmp + " Members + " + res.nonMembers + " Non-Members = ANP " + res.anp + ". Removed: " + res.entries.filter(function (e) { return e.flags.some(function (x) { return x.code === "early" || x.code === "late"; }); }).length + " outside the time and " + res.entries.filter(function (e) { return e.flags.some(function (x) { return x.code === "dup"; }); }).length + " duplicates" + (res.valid.length - res.anp ? ". Not counted: " + (res.valid.length - res.anp) + " with an unclear category" : "") + ".</p>" +
       '<p class="hint">Allowed window: ' + esc(Gals.fmt(res.earliest)) + " to " + esc(Gals.fmt(res.latest)) + "." + (w.anmp != null || w.anp != null ? " The GALS says ANMP " + (w.anmp != null ? w.anmp : "?") + " and ANP " + (w.anp != null ? w.anp : "?") + "." : "") + "</p>";
     var gl = shown(f);
     var cm = gl.length ? gl.map(function (x, k) { return commentHtml(x, k + 1, { where: x.where || (x.quote ? "" : "Whole file") }); }).join("") : '<div class="cmt gals"><div class="t">No GALS mistakes found</div></div>';
