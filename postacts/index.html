@@ -228,20 +228,6 @@ ul.plain { margin: 8px 0 0; padding-left: 20px; font-size: 14px; color: var(--mu
       </div>
     </section>
 
-    <section class="panel" aria-label="Templates">
-      <div class="runbar">
-        <div style="min-width:0">
-          <h2><span class="step">04</span>Templates</h2>
-          <p class="hint">Drop the blank 51st ADM templates (.docx) once. They stay saved on this device and are used to check bold, italics, header and footer. Name them like the files, for example "Post-Activity Report template".</p>
-        </div>
-        <label class="drop" id="tplDrop" for="tplFile" style="margin-top:0;min-width:220px">
-          <strong>Drop templates</strong><span class="types">.docx</span>
-          <input type="file" id="tplFile" accept=".docx" multiple>
-        </label>
-      </div>
-      <ul class="files" id="tplList"></ul>
-    </section>
-
     <section class="panel" aria-label="Run">
       <div class="runbar">
         <div class="row">
@@ -273,7 +259,8 @@ ul.plain { margin: 8px 0 0; padding-left: 20px; font-size: 14px; color: var(--mu
       <p class="hint">These depend on settings the files do not carry.</p>
       <ul class="plain">
         <li>GALS gives editing access to all DLSU email addresses, with "Viewers and commenters can see the option to download, print and copy" turned on.</li>
-        <li>Bold, italics, header and footer for PDF files. Word files are checked automatically.</li>
+        <li>Underline and header or footer for PDF files. Word files are checked fully.</li>
+        <li>Bold, italics and underline when the Pre-Acts is a scanned file, since a scan has no formatting to copy from.</li>
         <li>Signatures are actually signed, not just a name line.</li>
       </ul>
     </section>
@@ -558,12 +545,18 @@ var Fmt = (function () {
     var v = (m[1] || "").match(/w:val="([^"]*)"/);
     return !(v && /^(0|false|off)$/i.test(v[1]));
   }
+  function uflag(rpr) {
+    var m = rpr.match(/<w:u(\s[^>]*)?\/>/);
+    if (!m) return null;
+    var v = (m[1] || "").match(/w:val="([^"]*)"/);
+    return !(v && /^(none|0|false)$/i.test(v[1]));
+  }
   function readStyles(xml) {
     var map = {};
     (xml.match(/<w:style\b[\s\S]*?<\/w:style>/g) || []).forEach(function (st) {
       var id = (st.match(/w:styleId="([^"]+)"/) || [])[1]; if (!id) return;
       var rpr = (st.match(/<w:rPr>([\s\S]*?)<\/w:rPr>/) || [, ""])[1];
-      map[id] = { b: flag(rpr, "b"), i: flag(rpr, "i"), base: (st.match(/<w:basedOn w:val="([^"]+)"/) || [])[1] };
+      map[id] = { b: flag(rpr, "b"), i: flag(rpr, "i"), u: uflag(rpr), base: (st.match(/<w:basedOn w:val="([^"]+)"/) || [])[1] };
     });
     function get(id, k, depth) { var st = map[id]; if (!st || depth > 8) return null; return st[k] != null ? st[k] : get(st.base, k, depth + 1); }
     return function (id, k) { return id ? !!get(id, k, 0) : false; };
@@ -572,19 +565,20 @@ var Fmt = (function () {
     var out = [];
     (xml.match(/<w:p[ >][\s\S]*?<\/w:p>/g) || []).forEach(function (p) {
       var pStyle = (p.match(/<w:pPr>[\s\S]*?<w:pStyle w:val="([^"]+)"/) || [])[1];
-      var text = "", b = "", it = "";
+      var text = "", b = "", it = "", un = "";
       (p.match(/<w:r[ >][\s\S]*?<\/w:r>/g) || []).forEach(function (r) {
         var rpr = (r.match(/<w:rPr>([\s\S]*?)<\/w:rPr>/) || [, ""])[1];
         var rStyle = (rpr.match(/<w:rStyle w:val="([^"]+)"/) || [])[1];
-        var bb = flag(rpr, "b"), ii = flag(rpr, "i");
+        var bb = flag(rpr, "b"), ii = flag(rpr, "i"), uu = uflag(rpr);
         if (bb == null) bb = style(rStyle, "b") || style(pStyle, "b");
         if (ii == null) ii = style(rStyle, "i") || style(pStyle, "i");
+        if (uu == null) uu = style(rStyle, "u") || style(pStyle, "u");
         (r.match(/<w:t(?:\s[^>]*)?>[^<]*<\/w:t>|<w:tab\/>|<w:br\/>/g) || []).forEach(function (piece) {
           var t = piece === "<w:tab/>" ? "\t" : piece === "<w:br/>" ? "\n" : dec(piece.replace(/<[^>]+>/g, ""));
-          text += t; b += (bb ? "1" : "0").repeat(t.length); it += (ii ? "1" : "0").repeat(t.length);
+          text += t; b += (bb ? "1" : "0").repeat(t.length); it += (ii ? "1" : "0").repeat(t.length); un += (uu ? "1" : "0").repeat(t.length);
         });
       });
-      out.push({ text: text, b: b, i: it });
+      out.push({ text: text, b: b, i: it, u: un });
     });
     return out;
   }
@@ -608,7 +602,7 @@ var Fmt = (function () {
       var txt = partText(x), img = /<w:drawing|<w:pict|<v:imagedata|<pic:pic/.test(x);
       if (txt || img) parts[kind].push({ text: txt, image: img });
     }
-    return { paras: paras(docXml, style), headers: parts.header, footers: parts.footer };
+    return { paras: paras(docXml, style), headers: parts.header, footers: parts.footer, hasUnderline: true };
   }
   function classify(name) {
     var n = String(name || "").toLowerCase();
@@ -620,58 +614,71 @@ var Fmt = (function () {
     if (/pre.?act|proposal|ppr/.test(n)) return "pre";
     return "other";
   }
+  function labelKey(t) { return t.replace(/\s+/g, " ").trim(); }
+  // Formatted pieces of the reference (bold, italic or underlined labels and headings).
   function segments(paras) {
-    var segs = [];
+    var segs = {}, plain = {};
     paras.forEach(function (p) {
-      var start = 0;
+      var u = p.u || "", start = 0;
       for (var c = 1; c <= p.text.length; c++) {
-        if (c === p.text.length || p.b[c] !== p.b[start] || p.i[c] !== p.i[start]) {
-          var raw = p.text.slice(start, c), t = raw.trim();
-          if ((p.b[start] === "1" || p.i[start] === "1") && t.length >= 4 && /[A-Za-z]{2}/.test(t) && !/[\[\]<>{}]|_{3,}|\binsert\b|\btype here\b|\bxx+\b/i.test(t))
-            segs.push({ text: t, b: p.b[start] === "1", i: p.i[start] === "1" });
+        if (c === p.text.length || p.b[c] !== p.b[start] || p.i[c] !== p.i[start] || (u[c] || "0") !== (u[start] || "0")) {
+          var t = labelKey(p.text.slice(start, c));
+          var isB = p.b[start] === "1", isI = p.i[start] === "1", isU = (u[start] || "0") === "1";
+          if (t.length >= 4 && /[A-Za-z]{2}/.test(t) && !/[\[\]<>{}]|_{3,}/.test(t) && t.split(" ").length <= 10) {
+            if (isB || isI || isU) { var k = segs[t] || (segs[t] = { text: t, b: true, i: true, u: true }); k.b = k.b && isB; k.i = k.i && isI; k.u = k.u && isU; }
+            else plain[t] = 1;
+          }
           start = c;
         }
       }
     });
-    return segs;
+    return Object.keys(segs).map(function (k) { return segs[k]; }).filter(function (s) { return !plain[s.text] && (s.b || s.i || s.u); });
   }
-  // tpl: template fmt (or null); sub: submission fmt. Returns findings.
-  function compare(tpl, sub) {
+  // ref: the Pre-Acts formatting (or null); sub: this file's formatting. Returns findings.
+  function compare(ref, sub) {
     var out = [];
     if (!sub) return out;
-    var noun = function (k) { return k === "header" ? "header" : "footer"; };
     ["header", "footer"].forEach(function (k) {
-      var subParts = sub[k + "s"] || [], tplParts = tpl ? tpl[k + "s"] || [] : null;
-      if (!subParts.length && (!tpl || tplParts.length)) out.push({ severity: "Minor", mistake: "Missing JEMA header/footer", quote: "", why: "This file has no " + noun(k) + ".", fix: "Add the JEMA " + noun(k) + " from the 51st ADM template." });
-      else if (tpl && tplParts.length && subParts.length) {
-        var needImg = tplParts.some(function (x) { return x.image; }), hasImg = subParts.some(function (x) { return x.image; });
-        if (needImg && !hasImg) out.push({ severity: "Minor", mistake: "Missing JEMA header/footer", quote: "", why: "The template " + noun(k) + " has the JEMA image but this file's " + noun(k) + " does not.", fix: "Copy the " + noun(k) + " from the 51st ADM template." });
-      }
+      if (!Array.isArray(sub[k + "s"])) return;
+      if (!sub[k + "s"].length) out.push({ severity: "Minor", mistake: "Missing JEMA header/footer", quote: "", why: "This file has no " + k + ".", fix: "Add the JEMA " + k + " from the 51st ADM template." });
+      else if (ref && Array.isArray(ref[k + "s"]) && ref[k + "s"].some(function (x) { return x.image; }) && !sub[k + "s"].some(function (x) { return x.image; }))
+        out.push({ severity: "Minor", mistake: "Missing JEMA header/footer", quote: "", why: "The Pre-Acts " + k + " has the JEMA image but this file's " + k + " does not.", fix: "Use the same " + k + " as the Pre-Acts." });
     });
-    if (!tpl) return out;
-    var segs = segments(tpl.paras);
-    var seen = {}, found = 0;
-    var full = sub.paras;
-    segs.forEach(function (sg) {
-      var n = seen[sg.text] = (seen[sg.text] || 0) + 1, hit = null, count = 0;
-      for (var pi = 0; pi < full.length && !hit; pi++) {
-        var from = 0, at;
-        while ((at = full[pi].text.indexOf(sg.text, from)) > -1) { count++; if (count === n) { hit = { p: full[pi], at: at }; break; } from = at + 1; }
-      }
-      if (!hit) return;
-      found++;
-      var seg = hit.p.b.slice(hit.at, hit.at + sg.text.length), segI = hit.p.i.slice(hit.at, hit.at + sg.text.length);
-      var needB = sg.b && seg.indexOf("0") > -1, needI = sg.i && segI.indexOf("0") > -1;
-      if (needB || needI) {
-        var what = needB && needI ? "bold and italic" : needB ? "bold" : "italic";
-        out.push({ severity: "Minor", mistake: "Not following Boldface and Italicized text", quote: sg.text, why: '"' + sg.text + '" should be ' + what + " like in the template.", fix: "Make it " + what + "." });
-      }
+    if (!ref || !ref.paras) return out;
+    segments(ref.paras).forEach(function (sg) {
+      sub.paras.forEach(function (p) {
+        var pt = p.text, lead = pt.match(/^[\s\d.)(•\-–*]*/)[0].length;
+        if (pt.indexOf(sg.text) !== lead) return;
+        var after = pt.slice(lead + sg.text.length);
+        if (after && !/^\s*[:\-–]|^\s*$/.test(after) && !/[:]$/.test(sg.text)) return;
+        var range = function (str) { return (str || "").slice(lead, lead + sg.text.length); };
+        var needB = sg.b && range(p.b).indexOf("0") > -1, needI = sg.i && range(p.i).indexOf("0") > -1, needU = sg.u && sub.hasUnderline && range(p.u).indexOf("0") > -1;
+        if (!needB && !needI && !needU) return;
+        var what = [needB ? "bold" : "", needI ? "italic" : "", needU ? "underlined" : ""].filter(Boolean).join(" and ");
+        out.push({ severity: "Minor", mistake: "Not following Boldface and Italicized text", quote: sg.text, why: '"' + sg.text + '" should be ' + what + " like in the Pre-Acts.", fix: "Make it " + what + "." });
+      });
     });
-    if (segs.length >= 5 && found / segs.length < 0.3) out.push({ severity: "Minor", mistake: "Wrong template (based on 51st ADM templates)", quote: "", why: "Most of the labels and headings from the template are not in this file.", fix: "Move the content into the 51st ADM template." });
     return out;
   }
-  // Templates are saved in the browser as plain JSON.
-  return { fromZip: fromZip, compare: compare, classify: classify, segments: segments };
+  // Bold and italics from a text PDF, using the font names (underline cannot be read from a PDF).
+  async function fromPdfPage(page) {
+    try { await page.getOperatorList(); } catch (e) {}
+    var tc = await page.getTextContent(), lines = [], cur = null, lastY = null;
+    tc.items.forEach(function (it) {
+      var y = Math.round(it.transform[5]);
+      if (!cur || (lastY !== null && Math.abs(y - lastY) > 3)) { cur = { text: "", b: "", i: "", u: "" }; lines.push(cur); }
+      var nm = "";
+      try { var fo = page.commonObjs.get(it.fontName); nm = (fo && (fo.name || fo.loadedName)) || ""; } catch (e) {}
+      if (!nm && tc.styles && tc.styles[it.fontName]) nm = tc.styles[it.fontName].fontFamily || "";
+      var bb = /bold|black|heavy|semibold|demi/i.test(nm), ii = /italic|oblique/i.test(nm);
+      cur.text += it.str; cur.b += (bb ? "1" : "0").repeat(it.str.length); cur.i += (ii ? "1" : "0").repeat(it.str.length); cur.u += "0".repeat(it.str.length);
+      if (it.hasEOL) cur = null;
+      lastY = y;
+    });
+    return lines;
+  }
+  // Templates are saved in the browser as plain JSON.  // Templates are saved in the browser as plain JSON.
+  return { fromZip: fromZip, compare: compare, classify: classify, segments: segments, fromPdfPage: fromPdfPage };
 })();
 if (typeof module !== "undefined") module.exports = { Gals: Gals, Marks: Marks, Exact: Exact, Fmt: Fmt };
 </script>
@@ -822,16 +829,18 @@ if (typeof module !== "undefined") module.exports = { Gals: Gals, Marks: Marks, 
   async function pdfRead(buf) {
     if (typeof pdfjsLib === "undefined") throw new Error("PDF reader did not load");
     var pdf = await pdfjsLib.getDocument({ data: new Uint8Array(buf) }).promise;
-    var n = Math.min(pdf.numPages, 30), texts = [], chars = 0;
+    var n = Math.min(pdf.numPages, 30), texts = [], chars = 0, fparas = [];
     for (var p = 1; p <= n; p++) {
-      var tc = await (await pdf.getPage(p)).getTextContent();
+      var pg = await pdf.getPage(p);
+      try { fparas = fparas.concat(await Fmt.fromPdfPage(pg)); } catch (e) {}
+      var tc = await pg.getTextContent();
       var parts = [], last = null;
       tc.items.forEach(function (it) { var y = Math.round(it.transform[5]); if (last !== null && Math.abs(y - last) > 3) parts.push("\n"); parts.push(it.str); if (it.hasEOL) parts.push("\n"); last = y; });
       var t = parts.join("").replace(/[ \t]+\n/g, "\n").trim();
       chars += t.replace(/\s/g, "").length;
       texts.push("[PAGE " + p + "]\n" + t);
     }
-    if (chars / n >= 80) return { text: texts.join("\n\n"), images: [], pages: n, cut: pdf.numPages > n };
+    if (chars / n >= 80) return { text: texts.join("\n\n"), images: [], pages: n, cut: pdf.numPages > n, fmt: { paras: fparas, headers: null, footers: null, hasUnderline: false } };
     var imgs = [];
     for (var q = 1; q <= n; q++) {
       var page = await pdf.getPage(q);
@@ -859,7 +868,7 @@ if (typeof module !== "undefined") module.exports = { Gals: Gals, Marks: Marks, 
       try { if (typeof JSZip !== "undefined") fm = await Fmt.fromZip(await JSZip.loadAsync(dbuf)); } catch (e) { fm = null; }
       return { kind: "doc", text: htmlToText(r.value), images: [], fmt: fm };
     }
-    if (/\.pdf$/.test(nm)) { var p = await pdfRead(await file.arrayBuffer()); return { kind: "doc", text: p.text, images: p.images, pages: p.pages, scanned: p.scanned, cut: p.cut }; }
+    if (/\.pdf$/.test(nm)) { var p = await pdfRead(await file.arrayBuffer()); return { kind: "doc", text: p.text, images: p.images, pages: p.pages, scanned: p.scanned, cut: p.cut, fmt: p.fmt || null }; }
     if (/^image\//.test(file.type) || /\.(jpe?g|png|webp)$/.test(nm)) return { kind: "doc", text: "", images: [file], pages: 1, scanned: true };
     if (/\.txt$/.test(nm)) return { kind: "doc", text: await file.text(), images: [] };
     throw new Error("This file type is not supported");
@@ -886,7 +895,7 @@ if (typeof module !== "undefined") module.exports = { Gals: Gals, Marks: Marks, 
       try {
         var r = await readAny(files[i]);
         if (r.kind !== "doc") throw new Error("Drop the GALS in Post-Acts instead");
-        entry.text = r.text; entry.images = r.images;
+        entry.text = r.text; entry.images = r.images; entry.fmt = r.fmt || null;
         entry.sub = describe(r);
       } catch (e) { entry.sub = e.message || "Could not read this file"; entry.error = true; }
       render();
@@ -1101,31 +1110,14 @@ if (typeof module !== "undefined") module.exports = { Gals: Gals, Marks: Marks, 
   $("runBtn").addEventListener("click", runAll);
   $("stopBtn").addEventListener("click", function () { if (ctl) ctl.abort(); });
 
-  // ---------- Templates (saved in this browser) ----------
-  var templates = [];
-  try { templates = JSON.parse(localStorage.getItem("postacts_templates") || "[]") || []; } catch (e) { templates = []; }
-  function saveTemplates() { try { localStorage.setItem("postacts_templates", JSON.stringify(templates)); } catch (e) {} }
-  function clsOf(f) { var c = Fmt.classify(f.name); if (c === "other" && f.docType) c = Fmt.classify(f.docType); if (f.kind === "gals") c = "gals"; return c; }
-  function tplFor(f) { var c = clsOf(f), t = templates.filter(function (t) { return t.cls === c; })[0]; return t && t.fmt && t.fmt.paras ? t.fmt : null; }
-  function fmtFindings(f) { return f.fmt ? Fmt.compare(tplFor(f), f.fmt) : []; }
-  wireDrop("tplDrop", "tplFile", async function (files) {
-    for (var i = 0; i < files.length; i++) {
-      var file = files[i];
-      if (!/\.docx$/i.test(file.name) || typeof JSZip === "undefined") continue;
-      try {
-        var fm = await Fmt.fromZip(await JSZip.loadAsync(await file.arrayBuffer()));
-        var cls = Fmt.classify(file.name);
-        templates = templates.filter(function (t) { return t.cls !== cls || cls === "other"; });
-        templates.push({ name: file.name, cls: cls, fmt: fm });
-      } catch (e) {}
-    }
-    saveTemplates(); render();
-  });
-  var CLS_NAME = { report: "Post-Activity Report", gals: "GALS", lop: "List of Pictures", jl: "Justification Letter", amt: "AMT Evaluation", pre: "Pre-Acts", other: "Not matched, rename it" };
-  function renderTemplates() {
-    $("tplList").innerHTML = templates.map(function (t, i) { return '<li><span class="nm" title="' + esc(t.name) + '">' + esc(t.name) + '</span><span class="sub">Used for: ' + esc(CLS_NAME[t.cls] || t.cls) + " · " + Fmt.segments(t.fmt.paras).length + " formatted labels</span>" + '<button type="button" data-tpl="' + i + '">Remove</button></li>'; }).join("");
+  // ---------- Formatting reference: the Pre-Acts ----------
+  function preFmt() {
+    var withFmt = state.pre.files.filter(function (x) { return x.fmt && x.fmt.paras && x.fmt.paras.length; });
+    if (!withFmt.length) return null;
+    var f0 = withFmt[0];
+    return { paras: withFmt.reduce(function (a, x) { return a.concat(x.fmt.paras); }, []), headers: f0.fmt.headers, footers: f0.fmt.footers };
   }
-  $("tplList").addEventListener("click", function (e) { var b = e.target.closest("button[data-tpl]"); if (!b) return; templates.splice(+b.dataset.tpl, 1); saveTemplates(); render(); });
+  function fmtFindings(f) { return f.fmt ? Fmt.compare(preFmt(), f.fmt) : []; }
 
   // Everything shown for a file: rule or AI findings plus formatting findings, in reading order.
   function shown(f) {
@@ -1163,7 +1155,8 @@ if (typeof module !== "undefined") module.exports = { Gals: Gals, Marks: Marks, 
   function renderPre() {
     var d = state.pre.details;
     if (!state.pre.files.length) return '<div class="empty">Drop the approved Pre-Acts to compare the Post-Acts against it.</div>';
-    var html = "";
+    var html = "", pf = preFmt();
+    html += '<p class="hint">' + (pf ? Fmt.segments(pf.paras).length + " bold, italic or underlined labels found in the Pre-Acts. These are checked in the Post-Acts files." : "No formatting could be read from the Pre-Acts, so bold, italics and underline are not checked. A Word or text PDF Pre-Acts works for this.") + "</p>";
     if (d) {
       var row = function (k, v) { return v && (!Array.isArray(v) || v.length) ? "<dt>" + k + "</dt><dd>" + (Array.isArray(v) ? v.map(function (x, i) { return esc((i + 1) + ". " + x); }).join("<br>") : esc(v)) + "</dd>" : ""; };
       html += '<dl class="details">' + row("Title", d.event_title) + row("Date", (d.dates || []).join(", ")) + row("Time", [d.start_time, d.end_time].filter(Boolean).join(" to ")) + row("Venue", d.venue) + row("ENP", d.enp) + row("ENMP", d.enmp) + row("Objectives", d.objectives) + row("Project Head", d.project_heads) + "</dl>";
@@ -1245,7 +1238,7 @@ if (typeof module !== "undefined") module.exports = { Gals: Gals, Marks: Marks, 
   });
 
   function render() {
-    renderFileLists(); renderTemplates(); renderTally(); renderTabs(); renderView();
+    renderFileLists(); renderTally(); renderTabs(); renderView();
     $("exampleBanner").hidden = !state.isExample;
   }
 
