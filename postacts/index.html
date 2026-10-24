@@ -561,24 +561,37 @@ var Fmt = (function () {
     function get(id, k, depth) { var st = map[id]; if (!st || depth > 8) return null; return st[k] != null ? st[k] : get(st.base, k, depth + 1); }
     return function (id, k) { return id ? !!get(id, k, 0) : false; };
   }
-  function paras(xml, style) {
+  function paras(xml, style, links) {
     var out = [];
+    links = links || {};
     (xml.match(/<w:p[ >][\s\S]*?<\/w:p>/g) || []).forEach(function (p) {
       var pStyle = (p.match(/<w:pPr>[\s\S]*?<w:pStyle w:val="([^"]+)"/) || [])[1];
-      var text = "", b = "", it = "", un = "";
-      (p.match(/<w:r[ >][\s\S]*?<\/w:r>/g) || []).forEach(function (r) {
-        var rpr = (r.match(/<w:rPr>([\s\S]*?)<\/w:rPr>/) || [, ""])[1];
-        var rStyle = (rpr.match(/<w:rStyle w:val="([^"]+)"/) || [])[1];
-        var bb = flag(rpr, "b"), ii = flag(rpr, "i"), uu = uflag(rpr);
-        if (bb == null) bb = style(rStyle, "b") || style(pStyle, "b");
-        if (ii == null) ii = style(rStyle, "i") || style(pStyle, "i");
-        if (uu == null) uu = style(rStyle, "u") || style(pStyle, "u");
-        (r.match(/<w:t(?:\s[^>]*)?>[^<]*<\/w:t>|<w:tab\/>|<w:br\/>/g) || []).forEach(function (piece) {
-          var t = piece === "<w:tab/>" ? "\t" : piece === "<w:br/>" ? "\n" : dec(piece.replace(/<[^>]+>/g, ""));
-          text += t; b += (bb ? "1" : "0").repeat(t.length); it += (ii ? "1" : "0").repeat(t.length); un += (uu ? "1" : "0").repeat(t.length);
+      var text = "", b = "", it = "", un = "", hl = [], lk = [];
+      (p.match(/<w:hyperlink\b[^>]*>[\s\S]*?<\/w:hyperlink>|<w:r[ >][\s\S]*?<\/w:r>/g) || []).forEach(function (blk) {
+        var url = "";
+        if (/^<w:hyperlink/.test(blk)) {
+          var rid = (blk.match(/^<w:hyperlink\b[^>]*r:id="([^"]+)"/) || [])[1], anc = (blk.match(/^<w:hyperlink\b[^>]*w:anchor="([^"]+)"/) || [])[1];
+          url = rid ? (links[rid] || rid) : anc ? "#" + anc : "link";
+        }
+        (/^<w:hyperlink/.test(blk) ? (blk.match(/<w:r[ >][\s\S]*?<\/w:r>/g) || []) : [blk]).forEach(function (r) {
+          var rpr = (r.match(/<w:rPr>([\s\S]*?)<\/w:rPr>/) || [, ""])[1];
+          var rStyle = (rpr.match(/<w:rStyle w:val="([^"]+)"/) || [])[1];
+          var bb = flag(rpr, "b"), ii = flag(rpr, "i"), uu = uflag(rpr);
+          if (bb == null) bb = style(rStyle, "b") || style(pStyle, "b");
+          if (ii == null) ii = style(rStyle, "i") || style(pStyle, "i");
+          if (uu == null) uu = style(rStyle, "u") || style(pStyle, "u");
+          var h = (rpr.match(/<w:highlight w:val="([^"]+)"/) || [])[1] || "";
+          var sh = (rpr.match(/<w:shd\b[^>]*w:fill="([^"]+)"/) || [])[1] || "";
+          if (h === "none") h = "";
+          if (!h && sh && !/^(auto|ffffff)$/i.test(sh)) h = "#" + sh.toUpperCase();
+          (r.match(/<w:t(?:\s[^>]*)?>[^<]*<\/w:t>|<w:tab\/>|<w:br\/>/g) || []).forEach(function (piece) {
+            var t = piece === "<w:tab/>" ? "\t" : piece === "<w:br/>" ? "\n" : dec(piece.replace(/<[^>]+>/g, ""));
+            text += t; b += (bb ? "1" : "0").repeat(t.length); it += (ii ? "1" : "0").repeat(t.length); un += (uu ? "1" : "0").repeat(t.length);
+            for (var q = 0; q < t.length; q++) { hl.push(h); lk.push(url); }
+          });
         });
       });
-      out.push({ text: text, b: b, i: it, u: un });
+      out.push({ text: text, b: b, i: it, u: un, hl: hl, link: lk });
     });
     return out;
   }
@@ -602,7 +615,88 @@ var Fmt = (function () {
       var txt = partText(x), img = /<w:drawing|<w:pict|<v:imagedata|<pic:pic/.test(x);
       if (txt || img) parts[kind].push({ text: txt, image: img });
     }
-    return { paras: paras(docXml, style), headers: parts.header, footers: parts.footer, hasUnderline: true };
+    var links = {};
+    rels.forEach(function (r) { var id = (r.match(/Id="([^"]+)"/) || [])[1], t = (r.match(/Target="([^"]+)"/) || [])[1]; if (id && /hyperlink/i.test(r)) links[id] = dec(t || ""); });
+    var body = (docXml.match(/<w:body>([\s\S]*)<\/w:body>/) || [, docXml])[1];
+    var all = [], ad = null, sawHeading = false;
+    (body.match(/<w:tbl>[\s\S]*?<\/w:tbl>|<w:p[ >][\s\S]*?<\/w:p>/g) || []).forEach(function (blk) {
+      var ps = paras(blk, style, links);
+      var txt = ps.map(function (x) { return x.text; }).join(" ");
+      if (/^<w:tbl>/.test(blk)) {
+        if (!ad && (sawHeading || /title of (the )?activity/i.test(txt))) { ad = ps; ps.forEach(function (x) { x.inAD = true; }); }
+      } else if (!ad && /activity\s+details/i.test(txt)) sawHeading = true;
+      all = all.concat(ps);
+    });
+    return { paras: all, ad: ad, headers: parts.header, footers: parts.footer, hasUnderline: true, hasLinks: true, hasHighlight: true };
+  }
+  // Activity Details from PDF lines: from the "Activity Details" heading to the next numbered heading.
+  function adFromLines(lines) {
+    var start = -1;
+    for (var k = 0; k < lines.length; k++) if (/activity\s+details/i.test(lines[k].text)) { start = k + 1; break; }
+    if (start < 0) { for (var j = 0; j < lines.length; j++) if (/title of (the )?activity/i.test(lines[j].text)) { start = j; break; } }
+    if (start < 0) return null;
+    var out = [];
+    for (var m = start; m < lines.length && out.length < 45; m++) {
+      if (m > start && /^\s*(II|III|IV|2|3)[.)]?\s+[A-Z]/.test(lines[m].text)) break;
+      out.push(lines[m]);
+    }
+    return out.length ? out : null;
+  }
+  function tokens(ps) {
+    var out = [];
+    (ps || []).forEach(function (p) {
+      var re = /\S+/g, m;
+      while ((m = re.exec(p.text))) {
+        var a = m.index, z = a + m[0].length;
+        var all1 = function (str) { return !!str && str.slice(a, z).indexOf("0") === -1 && str.slice(a, z).length === z - a; };
+        out.push({ w: m[0], b: all1(p.b), i: all1(p.i), u: all1(p.u), hl: (p.hl && p.hl[a]) || "", link: (p.link && p.link[a]) || "" });
+      }
+    });
+    return out;
+  }
+  // Exact comparison of the Activity Details: words, order, links and formatting.
+  function compareAD(ref, sub) {
+    var out = [];
+    if (!ref || !ref.ad || !sub || !sub.ad) return out;
+    var x = tokens(ref.ad), y = tokens(sub.ad), n = x.length, mm = y.length, i, j;
+    var L = []; for (i = 0; i <= n; i++) L.push(new Array(mm + 1).fill(0));
+    for (i = n - 1; i >= 0; i--) for (j = mm - 1; j >= 0; j--) L[i][j] = x[i].w === y[j].w ? L[i + 1][j + 1] + 1 : Math.max(L[i + 1][j], L[i][j + 1]);
+    var ops = []; i = 0; j = 0;
+    while (i < n || j < mm) {
+      if (i < n && j < mm && x[i].w === y[j].w) { ops.push({ t: "same", a: x[i], b: y[j], bi: j }); i++; j++; }
+      else if (j < mm && (i >= n || L[i][j + 1] >= L[i + 1][j])) { ops.push({ t: "add", b: y[j], bi: j }); j++; }
+      else { ops.push({ t: "del", a: x[i], bi: j }); i++; }
+    }
+    var words = function (list) { return list.map(function (t) { return t.w; }).join(" "); };
+    // text and order differences
+    var k = 0;
+    while (k < ops.length) {
+      if (ops[k].t === "same") { k++; continue; }
+      var dels = [], adds = [], at = ops[k].bi;
+      while (k < ops.length && ops[k].t !== "same") { if (ops[k].t === "del") dels.push(ops[k].a); else adds.push(ops[k].b); k++; }
+      var q = adds.length ? words(adds) : words(y.slice(Math.max(0, at - 3), at)) || words(y.slice(at, at + 3));
+      var why = dels.length && adds.length ? 'The Pre-Acts has "' + words(dels) + '" but this file has "' + words(adds) + '".' : dels.length ? 'This file is missing "' + words(dels) + '" from the Pre-Acts.' : 'This file has "' + words(adds) + '" which is not in the Pre-Acts.';
+      out.push({ severity: "Minor", mistake: "Activity details inconsistent with PRE-ACTS", quote: q, why: why, fix: dels.length ? 'Copy "' + words(dels) + '" exactly from the Pre-Acts.' : "Remove it so it matches the Pre-Acts." });
+    }
+    // formatting and link differences on matching words
+    var kinds = [["b", "bold"], ["i", "italic"]];
+    if (ref.hasUnderline && sub.hasUnderline) kinds.push(["u", "underlined"]);
+    var group = null, flush = function () { if (group) { out.push(group.f); group = null; } };
+    ops.forEach(function (o) {
+      if (o.t !== "same") { flush(); return; }
+      var probs = [];
+      kinds.forEach(function (kd) { if (o.a[kd[0]] !== o.b[kd[0]]) probs.push((o.a[kd[0]] ? "" : "not ") + kd[1]); });
+      if (ref.hasHighlight && sub.hasHighlight && o.a.hl !== o.b.hl) probs.push(o.a.hl ? "highlighted" : "not highlighted");
+      if (ref.hasLinks && sub.hasLinks && o.a.link !== o.b.link) probs.push(o.a.link ? "linked to " + o.a.link : "not a link");
+      var key = probs.join(", ");
+      if (!key) { flush(); return; }
+      if (group && group.key === key) { group.ws.push(o.b.w); group.f.quote = group.ws.join(" "); group.f.why = '"' + group.f.quote + '" should be ' + key + " like in the Pre-Acts."; return; }
+      flush();
+      group = { key: key, ws: [o.b.w], f: { severity: "Minor", mistake: "Activity details inconsistent with PRE-ACTS", quote: o.b.w, why: '"' + o.b.w + '" should be ' + key + " like in the Pre-Acts.", fix: "Copy the formatting from the Pre-Acts." } };
+    });
+    flush();
+    if (out.length > 25) { var more = out.length - 24; out = out.slice(0, 24); out.push({ severity: "Minor", mistake: "Activity details inconsistent with PRE-ACTS", quote: "", why: "There are " + more + " more differences in the Activity Details.", fix: "Copy the whole Activity Details table from the Pre-Acts." }); }
+    return out;
   }
   function classify(name) {
     var n = String(name || "").toLowerCase();
@@ -647,6 +741,7 @@ var Fmt = (function () {
     if (!ref || !ref.paras) return out;
     segments(ref.paras).forEach(function (sg) {
       sub.paras.forEach(function (p) {
+        if (sub.ad && p.inAD) return;
         var pt = p.text, lead = pt.match(/^[\s\d.)(•\-–*]*/)[0].length;
         if (pt.indexOf(sg.text) !== lead) return;
         var after = pt.slice(lead + sg.text.length);
@@ -678,7 +773,7 @@ var Fmt = (function () {
     return lines;
   }
   // Templates are saved in the browser as plain JSON.  // Templates are saved in the browser as plain JSON.
-  return { fromZip: fromZip, compare: compare, classify: classify, segments: segments, fromPdfPage: fromPdfPage };
+  return { fromZip: fromZip, compare: compare, compareAD: compareAD, adFromLines: adFromLines, tokens: tokens, classify: classify, segments: segments, fromPdfPage: fromPdfPage };
 })();
 if (typeof module !== "undefined") module.exports = { Gals: Gals, Marks: Marks, Exact: Exact, Fmt: Fmt };
 </script>
@@ -840,7 +935,7 @@ if (typeof module !== "undefined") module.exports = { Gals: Gals, Marks: Marks, 
       chars += t.replace(/\s/g, "").length;
       texts.push("[PAGE " + p + "]\n" + t);
     }
-    if (chars / n >= 80) return { text: texts.join("\n\n"), images: [], pages: n, cut: pdf.numPages > n, fmt: { paras: fparas, headers: null, footers: null, hasUnderline: false } };
+    if (chars / n >= 80) return { text: texts.join("\n\n"), images: [], pages: n, cut: pdf.numPages > n, fmt: { paras: fparas, ad: Fmt.adFromLines(fparas), headers: null, footers: null, hasUnderline: false, hasLinks: false, hasHighlight: false } };
     var imgs = [];
     for (var q = 1; q <= n; q++) {
       var page = await pdf.getPage(q);
@@ -1060,7 +1155,7 @@ if (typeof module !== "undefined") module.exports = { Gals: Gals, Marks: Marks, 
     var out = await gem(prompt, { json: true });
     var list = Array.isArray(out && out.findings) ? out.findings : [];
     var skip = /objective\s*#?\s*\d*\s*(is\s*)?inconsistent|missing all objectives|enp\s*\/\s*enmp|incorrect anp/i;
-    f.findings = list.filter(function (x) { return !(out && out.report_fields && skip.test(String(x.mistake || ""))); }).map(function (x) { return { severity: /major/i.test(x.severity) ? "Major" : "Minor", mistake: String(x.mistake || "Mistake"), quote: String(x.quote || ""), why: String(x.why || ""), fix: String(x.fix || "") }; });
+    f.findings = list.filter(function (x) { return !(out && out.report_fields && skip.test(String(x.mistake || ""))) && !(adExact(f) && /activity details inconsistent/i.test(String(x.mistake || ""))); }).map(function (x) { return { severity: /major/i.test(x.severity) ? "Major" : "Minor", mistake: String(x.mistake || "Mistake"), quote: String(x.quote || ""), why: String(x.why || ""), fix: String(x.fix || "") }; });
     if (out && out.report_fields && typeof out.report_fields === "object") {
       var gf = state.post.filter(function (x) { return x.kind === "gals" && x.res; })[0];
       f.findings = f.findings.concat(Exact.fields(state.pre.details, out.report_fields, gf ? { anp: gf.res.anp, anmp: gf.res.anmp } : null));
@@ -1115,9 +1210,11 @@ if (typeof module !== "undefined") module.exports = { Gals: Gals, Marks: Marks, 
     var withFmt = state.pre.files.filter(function (x) { return x.fmt && x.fmt.paras && x.fmt.paras.length; });
     if (!withFmt.length) return null;
     var f0 = withFmt[0];
-    return { paras: withFmt.reduce(function (a, x) { return a.concat(x.fmt.paras); }, []), headers: f0.fmt.headers, footers: f0.fmt.footers };
+    var withAd = withFmt.filter(function (x) { return x.fmt.ad; })[0];
+    return { paras: withFmt.reduce(function (a, x) { return a.concat(x.fmt.paras); }, []), headers: f0.fmt.headers, footers: f0.fmt.footers, ad: withAd ? withAd.fmt.ad : null, hasUnderline: withAd ? withAd.fmt.hasUnderline : false, hasLinks: withAd ? withAd.fmt.hasLinks : false, hasHighlight: withAd ? withAd.fmt.hasHighlight : false };
   }
-  function fmtFindings(f) { return f.fmt ? Fmt.compare(preFmt(), f.fmt) : []; }
+  function fmtFindings(f) { if (!f.fmt) return []; var ref = preFmt(); return Fmt.compareAD(ref, f.fmt).concat(Fmt.compare(ref, f.fmt)); }
+  function adExact(f) { var ref = preFmt(); return !!(ref && ref.ad && f.fmt && f.fmt.ad); }
 
   // Everything shown for a file: rule or AI findings plus formatting findings, in reading order.
   function shown(f) {
@@ -1156,7 +1253,7 @@ if (typeof module !== "undefined") module.exports = { Gals: Gals, Marks: Marks, 
     var d = state.pre.details;
     if (!state.pre.files.length) return '<div class="empty">Drop the approved Pre-Acts to compare the Post-Acts against it.</div>';
     var html = "", pf = preFmt();
-    html += '<p class="hint">' + (pf ? Fmt.segments(pf.paras).length + " bold, italic or underlined labels found in the Pre-Acts. These are checked in the Post-Acts files." : "No formatting could be read from the Pre-Acts, so bold, italics and underline are not checked. A Word or text PDF Pre-Acts works for this.") + "</p>";
+    html += '<p class="hint">' + (pf ? Fmt.segments(pf.paras).length + " bold, italic or underlined labels found in the Pre-Acts. These are checked in the Post-Acts files." : "No formatting could be read from the Pre-Acts, so bold, italics and underline are not checked. A Word or text PDF Pre-Acts works for this.") + " " + (pf && pf.ad ? "The Activity Details (" + Fmt.tokens(pf.ad).length + " words) are compared exactly with every Post-Acts file" + (pf.hasLinks ? ", including links and highlights." : ". Links and underline need a Word Pre-Acts.") : "No Activity Details table was found in the Pre-Acts, so it can't be compared exactly.") + "</p>";
     if (d) {
       var row = function (k, v) { return v && (!Array.isArray(v) || v.length) ? "<dt>" + k + "</dt><dd>" + (Array.isArray(v) ? v.map(function (x, i) { return esc((i + 1) + ". " + x); }).join("<br>") : esc(v)) + "</dd>" : ""; };
       html += '<dl class="details">' + row("Title", d.event_title) + row("Date", (d.dates || []).join(", ")) + row("Time", [d.start_time, d.end_time].filter(Boolean).join(" to ")) + row("Venue", d.venue) + row("ENP", d.enp) + row("ENMP", d.enmp) + row("Objectives", d.objectives) + row("Project Head", d.project_heads) + "</dl>";
