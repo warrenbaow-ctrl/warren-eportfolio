@@ -176,7 +176,7 @@ ul.plain { margin: 8px 0 0; padding-left: 20px; font-size: 14px; color: var(--mu
 <body>
 <header class="band">
   <div class="wrap">
-    <p class="eyebrow">51st JEMA · Documentations</p>
+    <p class="eyebrow">51st JEMA · Documentations · v3</p>
     <h1>Post-Acts Checker</h1>
     <p class="lead">Drop the scanned Pre-Acts and the Post-Acts files. Each Post-Acts file comes back with its mistakes highlighted and a comment on why, based on the CSO mistakes list.</p>
   </div>
@@ -921,11 +921,11 @@ if (typeof module !== "undefined") module.exports = { Gals: Gals, Marks: Marks, 
         if (!f.text && f.images && f.images.length) { var s = logStep("Reading " + f.name); f.text = await transcribe(f.images, f.name, s); s.done("Read " + f.name); }
         if (!f.text.trim()) { logStep(f.name + " has no text to check").fail(f.name + " has no text to check"); continue; }
         try { await checkDoc(f); }
-        catch (e) { if (e && e.code === "cancelled") throw e; logStep(f.name).fail(f.name + ": " + (CODE_MSG[e && e.code] || "could not be checked. Press Check again.") + (e && e.message ? " Gemini said: " + (e.status ? e.status + " " : "") + e.message : "")); if (e && /no_key|bad_key|bad_model|rate_limited|network/.test(e.code)) throw e; }
+        catch (e) { if (e && e.code === "cancelled") throw e; logStep(f.name).fail(f.name + ": " + (CODE_MSG[e && e.code] || "could not be checked. Press Check again.") + (e && (e.status || e.message) ? " Gemini said: " + (e.status ? "error " + e.status + " " : "") + (e.message || "(no details)") : "")); if (e && /no_key|bad_key|bad_model|rate_limited|network/.test(e.code)) throw e; }
       }
       $("runStatus").textContent = "Done in " + Math.round((Date.now() - t0) / 1000) + "s";
     } catch (e) {
-      $("runStatus").textContent = (CODE_MSG[e && e.code] || "Something went wrong. Press Check again.") + (e && e.message ? " Gemini said: " + (e.status ? e.status + " " : "") + e.message : "");
+      $("runStatus").textContent = (CODE_MSG[e && e.code] || "Something went wrong. Press Check again.") + (e && (e.status || e.message) ? " Gemini said: " + (e.status ? "error " + e.status + " " : "") + (e.message || "(no details)") : "");
       if (window.console) console.error(e);
     } finally {
       state.busy = false; $("runBtn").disabled = false; $("stopBtn").hidden = true; render();
