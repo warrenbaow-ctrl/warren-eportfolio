@@ -799,13 +799,18 @@ if (typeof module !== "undefined") module.exports = { Gals: Gals, Marks: Marks, 
     var model = $("apiModel").value.trim() || "gemini-3.8-flash";
     var parts = [{ text: prompt }];
     for (var i = 0; i < (opts.images || []).length; i++) { var b = opts.images[i]; parts.push({ inline_data: { mime_type: b.type || "image/jpeg", data: await blobToB64(b) } }); }
-    var body = { contents: [{ role: "user", parts: parts }], generationConfig: opts.json ? { responseMimeType: "application/json", temperature: 0.2 } : { temperature: 0.1 } };
+    var body = { contents: [{ role: "user", parts: parts }] };
+    if (opts.json) body.generationConfig = { responseMimeType: "application/json" };
     var r;
-    try { r = await fetch(GEM_URL + encodeURIComponent(model) + ":generateContent", { method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": key }, body: JSON.stringify(body), signal: ctl.signal }); }
-    catch (e) { throw { code: e && e.name === "AbortError" ? "cancelled" : "network" }; }
+    for (var attempt = 0; attempt < 3; attempt++) {
+      try { r = await fetch(GEM_URL + encodeURIComponent(model) + ":generateContent", { method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": key }, body: JSON.stringify(body), signal: ctl.signal }); }
+      catch (e) { throw { code: e && e.name === "AbortError" ? "cancelled" : "network" }; }
+      if (r.ok || [500, 502, 503, 504].indexOf(r.status) === -1 || attempt === 2) break;
+      await new Promise(function (res) { setTimeout(res, 3000 * (attempt + 1)); });
+    }
     if (!r.ok) {
-      var msg = ""; try { msg = ((await r.json()).error || {}).message || ""; } catch (e) {}
-      throw { code: (r.status === 400 && /api key/i.test(msg)) || r.status === 401 || r.status === 403 ? "bad_key" : r.status === 404 ? "bad_model" : r.status === 429 ? "rate_limited" : r.status === 413 ? "prompt_too_large" : "upstream_error", message: msg };
+      var msg = ""; try { var ej = await r.json(); msg = (ej.error || {}).message || ""; } catch (e) {}
+      throw { code: (r.status === 400 && /api key/i.test(msg)) || r.status === 401 || r.status === 403 ? "bad_key" : r.status === 404 ? "bad_model" : r.status === 429 ? "rate_limited" : r.status === 413 ? "prompt_too_large" : "upstream_error", status: r.status, message: msg };
     }
     var data = await r.json();
     var cand = data.candidates && data.candidates[0];
@@ -916,11 +921,12 @@ if (typeof module !== "undefined") module.exports = { Gals: Gals, Marks: Marks, 
         if (!f.text && f.images && f.images.length) { var s = logStep("Reading " + f.name); f.text = await transcribe(f.images, f.name, s); s.done("Read " + f.name); }
         if (!f.text.trim()) { logStep(f.name + " has no text to check").fail(f.name + " has no text to check"); continue; }
         try { await checkDoc(f); }
-        catch (e) { if (e && e.code === "cancelled") throw e; logStep(f.name).fail(f.name + ": " + (CODE_MSG[e && e.code] || "could not be checked. Press Check again.")); if (e && /no_key|bad_key|bad_model|rate_limited|network/.test(e.code)) throw e; }
+        catch (e) { if (e && e.code === "cancelled") throw e; logStep(f.name).fail(f.name + ": " + (CODE_MSG[e && e.code] || "could not be checked. Press Check again.") + (e && e.message ? " Gemini said: " + (e.status ? e.status + " " : "") + e.message : "")); if (e && /no_key|bad_key|bad_model|rate_limited|network/.test(e.code)) throw e; }
       }
       $("runStatus").textContent = "Done in " + Math.round((Date.now() - t0) / 1000) + "s";
     } catch (e) {
-      $("runStatus").textContent = CODE_MSG[e && e.code] || "Something went wrong. Press Check again.";
+      $("runStatus").textContent = (CODE_MSG[e && e.code] || "Something went wrong. Press Check again.") + (e && e.message ? " Gemini said: " + (e.status ? e.status + " " : "") + e.message : "");
+      if (window.console) console.error(e);
     } finally {
       state.busy = false; $("runBtn").disabled = false; $("stopBtn").hidden = true; render();
     }
