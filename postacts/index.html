@@ -9,6 +9,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lexend:wght@500;600;700&family=Source+Sans+3:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
 <style>
@@ -176,7 +177,7 @@ ul.plain { margin: 8px 0 0; padding-left: 20px; font-size: 14px; color: var(--mu
 <body>
 <header class="band">
   <div class="wrap">
-    <p class="eyebrow">51st JEMA · Documentations · v3</p>
+    <p class="eyebrow">51st JEMA · Documentations · v4</p>
     <h1>Post-Acts Checker</h1>
     <p class="lead">Drop the scanned Pre-Acts and the Post-Acts files. Each Post-Acts file comes back with its mistakes highlighted and a comment on why, based on the CSO mistakes list.</p>
   </div>
@@ -227,6 +228,20 @@ ul.plain { margin: 8px 0 0; padding-left: 20px; font-size: 14px; color: var(--mu
       </div>
     </section>
 
+    <section class="panel" aria-label="Templates">
+      <div class="runbar">
+        <div style="min-width:0">
+          <h2><span class="step">04</span>Templates</h2>
+          <p class="hint">Drop the blank 51st ADM templates (.docx) once. They stay saved on this device and are used to check bold, italics, header and footer. Name them like the files, for example "Post-Activity Report template".</p>
+        </div>
+        <label class="drop" id="tplDrop" for="tplFile" style="margin-top:0;min-width:220px">
+          <strong>Drop templates</strong><span class="types">.docx</span>
+          <input type="file" id="tplFile" accept=".docx" multiple>
+        </label>
+      </div>
+      <ul class="files" id="tplList"></ul>
+    </section>
+
     <section class="panel" aria-label="Run">
       <div class="runbar">
         <div class="row">
@@ -255,11 +270,10 @@ ul.plain { margin: 8px 0 0; padding-left: 20px; font-size: 14px; color: var(--mu
 
     <section class="panel" aria-label="Manual checks">
       <h3>Check these by hand</h3>
-      <p class="hint">These depend on settings or formatting that the file text does not carry.</p>
+      <p class="hint">These depend on settings the files do not carry.</p>
       <ul class="plain">
         <li>GALS gives editing access to all DLSU email addresses, with "Viewers and commenters can see the option to download, print and copy" turned on.</li>
-        <li>JEMA header and footer are on every page, using the 51st ADM template.</li>
-        <li>Boldface and italicized text follow the template.</li>
+        <li>Bold, italics, header and footer for PDF files. Word files are checked automatically.</li>
         <li>Signatures are actually signed, not just a name line.</li>
       </ul>
     </section>
@@ -405,7 +419,32 @@ var Gals = (function () {
     if (cats.length) out.push({ severity: "Note", mistake: "Unclear member category", where: "Row " + rows(cats), rows: cats.map(function (e) { return e.row; }), why: "These rows are not marked Member or Non-Member, so they are not in ANMP or ANP.", fix: "Check the answers and fix the category if needed." });
     return out;
   }
-  return { parseStamp: parseStamp, guessColumns: guessColumns, check: check, findings: findings, fmt: fmt, category: category };
+  // Pulls GALS rows out of plain text (a GALS saved as PDF or Word). Returns a grid like a spreadsheet, or null.
+  function fromText(text) {
+    var lines = String(text || "").split(/\n/), grid = [["Timestamp", "Membership Status", "ID Number", "Name", "Email Address"]];
+    var stampRe = /(\d{1,2}\/\d{1,2}\/\d{4}[ ,T]+\d{1,2}:\d{2}(?::\d{2})?(?:\s*[AaPp][Mm])?)/;
+    lines.forEach(function (ln) {
+      var m = ln.match(stampRe);
+      if (!m) return;
+      var rest = (ln.slice(0, m.index) + " " + ln.slice(m.index + m[0].length)).replace(/\|/g, " ");
+      var email = (rest.match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/) || [""])[0];
+      rest = rest.replace(email, " ");
+      var cat = (rest.match(/\bnon[\s-]?member\b|\bmember\b/i) || [""])[0];
+      if (cat) rest = rest.replace(cat, " ");
+      var id = (rest.match(/\b\d{8}\b/) || [""])[0];
+      if (id) rest = rest.replace(id, " ");
+      var name = rest.replace(/\s+/g, " ").replace(/^[\s,;:-]+|[\s,;:-]+$/g, "");
+      grid.push([m[1].replace(/,/g, " ").replace(/\s+/g, " ").trim(), cat, id, name, email]);
+    });
+    if (grid.length < 4) return null;
+    var t = String(text);
+    var a = t.match(/\bANMP\b[^0-9\n]{0,15}(\d+)/i), b = t.match(/\bANP\b[^0-9\n]{0,15}(\d+)/i);
+    if (a || b) grid.push(["", "", "", "", ""]);
+    if (a) grid.push(["ANMP", +a[1], "", "", ""]);
+    if (b) grid.push(["ANP", +b[1], "", "", ""]);
+    return grid;
+  }
+  return { parseStamp: parseStamp, guessColumns: guessColumns, check: check, findings: findings, fmt: fmt, category: category, fromText: fromText };
 })();
 
 // ---------- Pure highlight logic: find each finding's quote in the document text ----------
@@ -509,7 +548,132 @@ var Exact = (function () {
   }
   return { clean: clean, diff: diff, fields: fields };
 })();
-if (typeof module !== "undefined") module.exports = { Gals: Gals, Marks: Marks, Exact: Exact };
+
+// ---------- Formatting: reads bold, italics, header and footer from a Word file, and compares with a template ----------
+var Fmt = (function () {
+  function dec(s) { return s.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&amp;/g, "&"); }
+  function flag(rpr, tag) {
+    var m = rpr.match(new RegExp("<w:" + tag + "(\\s[^>]*)?/>"));
+    if (!m) return null;
+    var v = (m[1] || "").match(/w:val="([^"]*)"/);
+    return !(v && /^(0|false|off)$/i.test(v[1]));
+  }
+  function readStyles(xml) {
+    var map = {};
+    (xml.match(/<w:style\b[\s\S]*?<\/w:style>/g) || []).forEach(function (st) {
+      var id = (st.match(/w:styleId="([^"]+)"/) || [])[1]; if (!id) return;
+      var rpr = (st.match(/<w:rPr>([\s\S]*?)<\/w:rPr>/) || [, ""])[1];
+      map[id] = { b: flag(rpr, "b"), i: flag(rpr, "i"), base: (st.match(/<w:basedOn w:val="([^"]+)"/) || [])[1] };
+    });
+    function get(id, k, depth) { var st = map[id]; if (!st || depth > 8) return null; return st[k] != null ? st[k] : get(st.base, k, depth + 1); }
+    return function (id, k) { return id ? !!get(id, k, 0) : false; };
+  }
+  function paras(xml, style) {
+    var out = [];
+    (xml.match(/<w:p[ >][\s\S]*?<\/w:p>/g) || []).forEach(function (p) {
+      var pStyle = (p.match(/<w:pPr>[\s\S]*?<w:pStyle w:val="([^"]+)"/) || [])[1];
+      var text = "", b = "", it = "";
+      (p.match(/<w:r[ >][\s\S]*?<\/w:r>/g) || []).forEach(function (r) {
+        var rpr = (r.match(/<w:rPr>([\s\S]*?)<\/w:rPr>/) || [, ""])[1];
+        var rStyle = (rpr.match(/<w:rStyle w:val="([^"]+)"/) || [])[1];
+        var bb = flag(rpr, "b"), ii = flag(rpr, "i");
+        if (bb == null) bb = style(rStyle, "b") || style(pStyle, "b");
+        if (ii == null) ii = style(rStyle, "i") || style(pStyle, "i");
+        (r.match(/<w:t(?:\s[^>]*)?>[^<]*<\/w:t>|<w:tab\/>|<w:br\/>/g) || []).forEach(function (piece) {
+          var t = piece === "<w:tab/>" ? "\t" : piece === "<w:br/>" ? "\n" : dec(piece.replace(/<[^>]+>/g, ""));
+          text += t; b += (bb ? "1" : "0").repeat(t.length); it += (ii ? "1" : "0").repeat(t.length);
+        });
+      });
+      out.push({ text: text, b: b, i: it });
+    });
+    return out;
+  }
+  function partText(xml) { return paras(xml, function () { return false; }).map(function (p) { return p.text; }).join(" ").replace(/\s+/g, " ").trim(); }
+  // zip: a JSZip instance of the .docx
+  async function fromZip(zip) {
+    var docXml = zip.file("word/document.xml") ? await zip.file("word/document.xml").async("string") : "";
+    var stXml = zip.file("word/styles.xml") ? await zip.file("word/styles.xml").async("string") : "";
+    var style = readStyles(stXml);
+    var refs = {}; (docXml.match(/<w:(header|footer)Reference[^>]*r:id="([^"]+)"/g) || []).forEach(function (m) { refs[m.match(/r:id="([^"]+)"/)[1]] = 1; });
+    var relXml = zip.file("word/_rels/document.xml.rels") ? await zip.file("word/_rels/document.xml.rels").async("string") : "";
+    var parts = { header: [], footer: [] };
+    var rels = relXml.match(/<Relationship\b[^>]*>/g) || [];
+    for (var k = 0; k < rels.length; k++) {
+      var id = (rels[k].match(/Id="([^"]+)"/) || [])[1], target = (rels[k].match(/Target="([^"]+)"/) || [])[1] || "";
+      var kind = /\/header$/.test((rels[k].match(/Type="([^"]+)"/) || [])[1] || "") ? "header" : /\/footer$/.test((rels[k].match(/Type="([^"]+)"/) || [])[1] || "") ? "footer" : null;
+      if (!kind || !refs[id]) continue;
+      var f = zip.file("word/" + target.replace(/^\/?word\//, ""));
+      if (!f) continue;
+      var x = await f.async("string");
+      var txt = partText(x), img = /<w:drawing|<w:pict|<v:imagedata|<pic:pic/.test(x);
+      if (txt || img) parts[kind].push({ text: txt, image: img });
+    }
+    return { paras: paras(docXml, style), headers: parts.header, footers: parts.footer };
+  }
+  function classify(name) {
+    var n = String(name || "").toLowerCase();
+    if (/gals|attendance/.test(n)) return "gals";
+    if (/list of pictures|\blop\b|pictures/.test(n)) return "lop";
+    if (/justification|\bjl\b/.test(n)) return "jl";
+    if (/\bamt\b|evaluation/.test(n)) return "amt";
+    if (/post.?activity|activity report|\bpar\b|report/.test(n)) return "report";
+    if (/pre.?act|proposal|ppr/.test(n)) return "pre";
+    return "other";
+  }
+  function segments(paras) {
+    var segs = [];
+    paras.forEach(function (p) {
+      var start = 0;
+      for (var c = 1; c <= p.text.length; c++) {
+        if (c === p.text.length || p.b[c] !== p.b[start] || p.i[c] !== p.i[start]) {
+          var raw = p.text.slice(start, c), t = raw.trim();
+          if ((p.b[start] === "1" || p.i[start] === "1") && t.length >= 4 && /[A-Za-z]{2}/.test(t) && !/[\[\]<>{}]|_{3,}|\binsert\b|\btype here\b|\bxx+\b/i.test(t))
+            segs.push({ text: t, b: p.b[start] === "1", i: p.i[start] === "1" });
+          start = c;
+        }
+      }
+    });
+    return segs;
+  }
+  // tpl: template fmt (or null); sub: submission fmt. Returns findings.
+  function compare(tpl, sub) {
+    var out = [];
+    if (!sub) return out;
+    var noun = function (k) { return k === "header" ? "header" : "footer"; };
+    ["header", "footer"].forEach(function (k) {
+      var subParts = sub[k + "s"] || [], tplParts = tpl ? tpl[k + "s"] || [] : null;
+      if (!subParts.length && (!tpl || tplParts.length)) out.push({ severity: "Minor", mistake: "Missing JEMA header/footer", quote: "", why: "This file has no " + noun(k) + ".", fix: "Add the JEMA " + noun(k) + " from the 51st ADM template." });
+      else if (tpl && tplParts.length && subParts.length) {
+        var needImg = tplParts.some(function (x) { return x.image; }), hasImg = subParts.some(function (x) { return x.image; });
+        if (needImg && !hasImg) out.push({ severity: "Minor", mistake: "Missing JEMA header/footer", quote: "", why: "The template " + noun(k) + " has the JEMA image but this file's " + noun(k) + " does not.", fix: "Copy the " + noun(k) + " from the 51st ADM template." });
+      }
+    });
+    if (!tpl) return out;
+    var segs = segments(tpl.paras);
+    var seen = {}, found = 0;
+    var full = sub.paras;
+    segs.forEach(function (sg) {
+      var n = seen[sg.text] = (seen[sg.text] || 0) + 1, hit = null, count = 0;
+      for (var pi = 0; pi < full.length && !hit; pi++) {
+        var from = 0, at;
+        while ((at = full[pi].text.indexOf(sg.text, from)) > -1) { count++; if (count === n) { hit = { p: full[pi], at: at }; break; } from = at + 1; }
+      }
+      if (!hit) return;
+      found++;
+      var seg = hit.p.b.slice(hit.at, hit.at + sg.text.length), segI = hit.p.i.slice(hit.at, hit.at + sg.text.length);
+      var needB = sg.b && seg.indexOf("0") > -1, needI = sg.i && segI.indexOf("0") > -1;
+      if (needB || needI) {
+        var what = needB && needI ? "bold and italic" : needB ? "bold" : "italic";
+        out.push({ severity: "Minor", mistake: "Not following Boldface and Italicized text", quote: sg.text, why: '"' + sg.text + '" should be ' + what + " like in the template.", fix: "Make it " + what + "." });
+      }
+    });
+    if (segs.length >= 5 && found / segs.length < 0.3) out.push({ severity: "Minor", mistake: "Wrong template (based on 51st ADM templates)", quote: "", why: "Most of the labels and headings from the template are not in this file.", fix: "Move the content into the 51st ADM template." });
+    return out;
+  }
+  // Templates are saved in the browser as plain JSON.
+  return { fromZip: fromZip, compare: compare, classify: classify, segments: segments };
+})();
+if (typeof module !== "undefined") module.exports = { Gals: Gals, Marks: Marks, Exact: Exact, Fmt: Fmt };
 </script>
 
 <script>
@@ -689,8 +853,11 @@ if (typeof module !== "undefined") module.exports = { Gals: Gals, Marks: Marks, 
     }
     if (/\.docx$/.test(nm)) {
       if (typeof mammoth === "undefined") throw new Error("Word reader did not load");
-      var r = await mammoth.convertToHtml({ arrayBuffer: await file.arrayBuffer() });
-      return { kind: "doc", text: htmlToText(r.value), images: [] };
+      var dbuf = await file.arrayBuffer();
+      var r = await mammoth.convertToHtml({ arrayBuffer: dbuf });
+      var fm = null;
+      try { if (typeof JSZip !== "undefined") fm = await Fmt.fromZip(await JSZip.loadAsync(dbuf)); } catch (e) { fm = null; }
+      return { kind: "doc", text: htmlToText(r.value), images: [], fmt: fm };
     }
     if (/\.pdf$/.test(nm)) { var p = await pdfRead(await file.arrayBuffer()); return { kind: "doc", text: p.text, images: p.images, pages: p.pages, scanned: p.scanned, cut: p.cut }; }
     if (/^image\//.test(file.type) || /\.(jpe?g|png|webp)$/.test(nm)) return { kind: "doc", text: "", images: [file], pages: 1, scanned: true };
@@ -699,7 +866,7 @@ if (typeof module !== "undefined") module.exports = { Gals: Gals, Marks: Marks, 
   }
   function describe(f) {
     if (f.error) return f.error;
-    if (f.kind === "gals") { var g = f.grids[f.sheet] || []; return "Sheet · " + Math.max(0, g.length - 1) + " rows"; }
+    if (f.kind === "gals") { var g = f.grids[f.sheet] || []; return "GALS · " + g.filter(function (r) { return Gals.parseStamp(r[0]) || r.some(function (c) { return Gals.parseStamp(c); }); }).length + " entries"; }
     if (f.images && f.images.length && !f.text) return "Scanned · " + f.images.length + " page" + (f.images.length > 1 ? "s" : "") + " · Gemini will read it";
     return (f.text || "").split(/\s+/).filter(Boolean).length + " words" + (f.cut ? " · first 30 pages" : "");
   }
@@ -733,6 +900,7 @@ if (typeof module !== "undefined") module.exports = { Gals: Gals, Marks: Marks, 
       try {
         var r = await readAny(files[i]);
         Object.assign(f, r);
+        if (f.kind === "doc" && f.text) { var gg = Gals.fromText(f.text); if (gg) { f.kind = "gals"; f.grids = [gg]; f.sheetNames = ["Table"]; } }
         if (f.kind === "gals") { f.sheet = 0; f.docType = "GALS"; prepGals(f); }
         f.sub = describe(f);
       } catch (e) { f.error = e.message || "Could not read this file"; f.sub = f.error; }
@@ -743,7 +911,6 @@ if (typeof module !== "undefined") module.exports = { Gals: Gals, Marks: Marks, 
   // ---------- Gemini ----------
   var RULES = [
     "GENERAL MISTAKES (all Minor):",
-    "- Missing/Wrong ARN",
     "- Missing documents: Pre-acts",
     "- Wrong template (based on 51st ADM templates)",
     "- Does not follow subject-predicate form",
@@ -851,7 +1018,7 @@ if (typeof module !== "undefined") module.exports = { Gals: Gals, Marks: Marks, 
     if (!state.pre.text || state.pre.details) return;
     var s = logStep("Getting event details from the Pre-Acts");
     var d = await gem(
-      "From this approved Pre-Acts / project proposal, pull out the event details. Reply with only JSON: {\"event_title\": string, \"arn\": string, \"dates\": [\"YYYY-MM-DD\"], \"start_time\": \"HH:MM\" (24-hour), \"end_time\": \"HH:MM\", \"venue\": string, \"enp\": string, \"enmp\": string, \"objectives\": [string, copied word for word], \"project_heads\": [string with name, contact number and email as written]}. Use \"\" or [] when something is not in the text.\n\n" + state.pre.text.slice(0, 80000),
+      "From this approved Pre-Acts / project proposal, pull out the event details. Reply with only JSON: {\"event_title\": string, \"dates\": [\"YYYY-MM-DD\"], \"start_time\": \"HH:MM\" (24-hour), \"end_time\": \"HH:MM\", \"venue\": string, \"enp\": string, \"enmp\": string, \"objectives\": [string, copied word for word], \"project_heads\": [string with name, contact number and email as written]}. Use \"\" or [] when something is not in the text.\n\n" + state.pre.text.slice(0, 80000),
       { json: true }
     );
     state.pre.details = d && typeof d === "object" ? d : {};
@@ -873,7 +1040,7 @@ if (typeof module !== "undefined") module.exports = { Gals: Gals, Marks: Marks, 
       "You are checking one file from a JEMA (De La Salle University student org) Post-Acts submission the way the CSO checker does. Check it against the approved Pre-Acts and the mistakes list below. Apply only the rules that fit this kind of document. Report a mistake only when you can point to it in the text.\n\n" +
       RULES + "\n\n" + galsSummary() + "\n" +
       "Other files in this Post-Acts set: " + others + ".\n\n" +
-      "DO NOT report these, the page checks them by itself: 'Objective # _ inconsistent with PPR', 'ENP/ENMP inconsistent with PPR', 'Incorrect ANP/ANMP count', 'Missing all objectives and explanations'. Instead copy those values into report_fields.\n\n" +
+      "Do not check the ARN. DO NOT report these, the page checks them by itself: 'Missing JEMA header/footer', 'Not following Boldface and Italicized text', 'Wrong template', 'Objective # _ inconsistent with PPR', 'ENP/ENMP inconsistent with PPR', 'Incorrect ANP/ANMP count', 'Missing all objectives and explanations'. Instead copy those values into report_fields.\n\n" +
       "LIMITS: The file was turned into plain text, so bold, italics, headers, footers, logos and the exact template are lost, and signatures may be images. Do NOT report 'Not following Boldface and Italicized text', 'Missing JEMA header/footer' or 'Wrong template'. Only report 'Missing signatures' if the signature section itself is missing. If the Pre-Acts text is missing, skip checks that need it and say so in cannot_check.\n\n" +
       "Reply with ONLY JSON in this shape:\n" +
       '{"doc_type":"Post-Activity Report" or "GALS" or "List of Pictures" or "Justification Letter" or "AMT Evaluation" or "Other","findings":[{"severity":"Major" or "Minor","mistake":"the label from the list, with # filled in","quote":"text copied EXACTLY from the FILE TEXT, character for character, 3 to 25 words. For something missing, quote the nearest heading.","why":"one plain sentence","fix":"one plain sentence"}],"cannot_check":["short reasons"],"report_fields":{"objectives":["each objective copied EXACTLY as written in the FILE TEXT, without its number"],"enp":"as written","enmp":"as written","anp":"as written","anmp":"as written","attendance_quote":"the exact row or line in the FILE TEXT that holds these numbers"}}\n' +
@@ -934,6 +1101,40 @@ if (typeof module !== "undefined") module.exports = { Gals: Gals, Marks: Marks, 
   $("runBtn").addEventListener("click", runAll);
   $("stopBtn").addEventListener("click", function () { if (ctl) ctl.abort(); });
 
+  // ---------- Templates (saved in this browser) ----------
+  var templates = [];
+  try { templates = JSON.parse(localStorage.getItem("postacts_templates") || "[]") || []; } catch (e) { templates = []; }
+  function saveTemplates() { try { localStorage.setItem("postacts_templates", JSON.stringify(templates)); } catch (e) {} }
+  function clsOf(f) { var c = Fmt.classify(f.name); if (c === "other" && f.docType) c = Fmt.classify(f.docType); if (f.kind === "gals") c = "gals"; return c; }
+  function tplFor(f) { var c = clsOf(f), t = templates.filter(function (t) { return t.cls === c; })[0]; return t && t.fmt && t.fmt.paras ? t.fmt : null; }
+  function fmtFindings(f) { return f.fmt ? Fmt.compare(tplFor(f), f.fmt) : []; }
+  wireDrop("tplDrop", "tplFile", async function (files) {
+    for (var i = 0; i < files.length; i++) {
+      var file = files[i];
+      if (!/\.docx$/i.test(file.name) || typeof JSZip === "undefined") continue;
+      try {
+        var fm = await Fmt.fromZip(await JSZip.loadAsync(await file.arrayBuffer()));
+        var cls = Fmt.classify(file.name);
+        templates = templates.filter(function (t) { return t.cls !== cls || cls === "other"; });
+        templates.push({ name: file.name, cls: cls, fmt: fm });
+      } catch (e) {}
+    }
+    saveTemplates(); render();
+  });
+  var CLS_NAME = { report: "Post-Activity Report", gals: "GALS", lop: "List of Pictures", jl: "Justification Letter", amt: "AMT Evaluation", pre: "Pre-Acts", other: "Not matched, rename it" };
+  function renderTemplates() {
+    $("tplList").innerHTML = templates.map(function (t, i) { return '<li><span class="nm" title="' + esc(t.name) + '">' + esc(t.name) + '</span><span class="sub">Used for: ' + esc(CLS_NAME[t.cls] || t.cls) + " · " + Fmt.segments(t.fmt.paras).length + " formatted labels</span>" + '<button type="button" data-tpl="' + i + '">Remove</button></li>'; }).join("");
+  }
+  $("tplList").addEventListener("click", function (e) { var b = e.target.closest("button[data-tpl]"); if (!b) return; templates.splice(+b.dataset.tpl, 1); saveTemplates(); render(); });
+
+  // Everything shown for a file: rule or AI findings plus formatting findings, in reading order.
+  function shown(f) {
+    var core = f.kind === "doc" && !f.checked ? [] : (f.findings || []);
+    var list = core.concat(fmtFindings(f));
+    if (f.kind === "doc" && f.text) { var pos = function (x) { var a = x.quote ? Marks.locate(f.text, x.quote) : null; return a ? a[0] : 1e12; }; list = list.slice().sort(function (a, b) { return pos(a) - pos(b); }); }
+    return list;
+  }
+
   // ---------- Rendering ----------
   function sevClass(sv) { return sv === "Major" ? "major" : sv === "Minor" ? "minor" : "gals"; }
   function pill(sv) { return '<span class="pill ' + (sv === "Major" ? "major" : sv === "Minor" ? "minor" : "gals") + '">' + esc(sv) + "</span>"; }
@@ -945,7 +1146,7 @@ if (typeof module !== "undefined") module.exports = { Gals: Gals, Marks: Marks, 
   $("preList").addEventListener("click", function (e) { var b = e.target.closest("button[data-pre]"); if (!b || state.busy) return; state.pre.files.splice(+b.dataset.pre, 1); state.pre.text = ""; state.pre.details = null; render(); });
   $("postList").addEventListener("click", function (e) { var b = e.target.closest("button[data-post]"); if (!b || state.busy) return; state.post = state.post.filter(function (f) { return f.id !== b.dataset.post; }); if (state.view === b.dataset.post) state.view = "pre"; render(); });
 
-  function allFindings() { return state.post.reduce(function (a, f) { return a.concat(f.findings || []); }, []); }
+  function allFindings() { return state.post.reduce(function (a, f) { return a.concat(shown(f)); }, []); }
   function renderTally() {
     var all = allFindings();
     var c = function (s) { return all.filter(function (f) { return f.severity === s; }).length; };
@@ -953,7 +1154,7 @@ if (typeof module !== "undefined") module.exports = { Gals: Gals, Marks: Marks, 
   }
 
   function renderTabs() {
-    var tabs = [{ id: "pre", label: "Pre-Acts", n: null }].concat(state.post.map(function (f) { return { id: f.id, label: f.docType || f.name, n: f.kind === "gals" ? (f.findings || []).filter(function (x) { return x.severity !== "Note"; }).length : (f.checked ? f.findings.length : null) }; }));
+    var tabs = [{ id: "pre", label: "Pre-Acts", n: null }].concat(state.post.map(function (f) { return { id: f.id, label: f.docType || f.name, n: f.kind === "gals" || f.checked || f.fmt ? shown(f).filter(function (x) { return x.severity !== "Note"; }).length : null }; }));
     if (!tabs.some(function (t) { return t.id === state.view; })) state.view = "pre";
     $("tabs").innerHTML = tabs.map(function (t) { return '<button role="tab" type="button" data-tab="' + t.id + '" aria-selected="' + (t.id === state.view) + '">' + esc(t.label) + (t.n == null ? "" : '<span class="cnt' + (t.n ? " has" : "") + '">' + t.n + "</span>") + "</button>"; }).join("");
   }
@@ -965,7 +1166,7 @@ if (typeof module !== "undefined") module.exports = { Gals: Gals, Marks: Marks, 
     var html = "";
     if (d) {
       var row = function (k, v) { return v && (!Array.isArray(v) || v.length) ? "<dt>" + k + "</dt><dd>" + (Array.isArray(v) ? v.map(function (x, i) { return esc((i + 1) + ". " + x); }).join("<br>") : esc(v)) + "</dd>" : ""; };
-      html += '<dl class="details">' + row("Title", d.event_title) + row("ARN", d.arn) + row("Date", (d.dates || []).join(", ")) + row("Time", [d.start_time, d.end_time].filter(Boolean).join(" to ")) + row("Venue", d.venue) + row("ENP", d.enp) + row("ENMP", d.enmp) + row("Objectives", d.objectives) + row("Project Head", d.project_heads) + "</dl>";
+      html += '<dl class="details">' + row("Title", d.event_title) + row("Date", (d.dates || []).join(", ")) + row("Time", [d.start_time, d.end_time].filter(Boolean).join(" to ")) + row("Venue", d.venue) + row("ENP", d.enp) + row("ENMP", d.enmp) + row("Objectives", d.objectives) + row("Project Head", d.project_heads) + "</dl>";
     }
     if (state.pre.text) html += '<p class="hint" style="margin-top:16px;font-weight:600">What was read from the Pre-Acts</p><div class="paper" style="margin-top:8px">' + esc(state.pre.text) + "</div>";
     else html += '<div class="empty">The Pre-Acts will be read when you press Check Post-Acts.</div>';
@@ -974,13 +1175,13 @@ if (typeof module !== "undefined") module.exports = { Gals: Gals, Marks: Marks, 
 
   function commentHtml(f, n, opts) {
     var cls = sevClass(f.severity);
-    return '<div class="cmt ' + cls + '" data-n="' + n + '" id="c-' + n + '"><div class="hd"><span class="num">' + n + "</span>" + pill(f.severity) + '</div><div class="t">' + esc(f.mistake) + '</div><div class="why">' + esc(f.why) + "</div>" + (f.fix ? '<div class="fix"><b>Fix:</b> ' + esc(f.fix) + "</div>" : "") + (opts && opts.loose ? '<div class="loose">Not highlighted' + (f.quote ? ': "' + esc(f.quote) + '"' : "") + "</div>" : "") + (opts && opts.where ? '<div class="loose">' + esc(opts.where) + "</div>" : "") + "</div>";
+    return '<div class="cmt ' + cls + '" data-n="' + n + '" id="c-' + n + '"><div class="hd"><span class="num">' + n + "</span>" + pill(f.severity) + '</div><div class="t">' + esc(f.mistake) + '</div><div class="why">' + esc(f.why) + "</div>" + (f.fix ? '<div class="fix"><b>Fix:</b> ' + esc(f.fix) + "</div>" : "") + (opts && opts.loose ? '<div class="loose">' + (f.quote ? 'Not highlighted: "' + esc(f.quote) + '"' : "Applies to the whole file") + "</div>" : "") + (opts && opts.where ? '<div class="loose">' + esc(opts.where) + "</div>" : "") + "</div>";
   }
 
   function renderDoc(f) {
     if (f.error) return '<div class="empty">' + esc(f.error) + "</div>";
     if (!f.text) return '<div class="empty">' + (f.images && f.images.length ? "This is a scanned file. Gemini will read it when you press Check Post-Acts." : "No text found in this file.") + "</div>";
-    var findings = f.findings || [];
+    var findings = shown(f);
     var plan = Marks.plan(f.text, findings);
     var html = "", at = 0;
     plan.ranges.forEach(function (r) {
@@ -990,8 +1191,8 @@ if (typeof module !== "undefined") module.exports = { Gals: Gals, Marks: Marks, 
     });
     html += esc(f.text.slice(at));
     var loose = {}; plan.loose.forEach(function (n) { loose[n] = 1; });
-    var cmts = !f.checked ? '<div class="empty">Not checked yet. Press Check Post-Acts.</div>' :
-      findings.length ? findings.map(function (x, k) { return commentHtml(x, k + 1, { loose: loose[k + 1] }); }).join("") : '<div class="cmt gals"><div class="t">No mistakes found</div><div class="why">Still check the formatting items at the bottom of the page by hand.</div></div>';
+    var cmts = !f.checked && !findings.length ? '<div class="empty">Not checked yet. Press Check Post-Acts.</div>' :
+      (!f.checked ? '<div class="cmt gals"><div class="t">Formatting checked</div><div class="why">The content is checked when you press Check Post-Acts.</div></div>' : "") + (findings.length ? findings.map(function (x, k) { return commentHtml(x, k + 1, { loose: loose[k + 1] }); }).join("") : '<div class="cmt gals"><div class="t">No mistakes found</div><div class="why">Still check the formatting items at the bottom of the page by hand.</div></div>');
     if (f.cannot && f.cannot.length) cmts += '<div class="cmt gals"><div class="t">Not checked</div><div class="why">' + f.cannot.map(esc).join("<br>") + "</div></div>";
     return '<div class="viewer"><div class="paper" id="paper">' + html + '</div><div class="comments">' + cmts + "</div></div>";
   }
@@ -1007,7 +1208,8 @@ if (typeof module !== "undefined") module.exports = { Gals: Gals, Marks: Marks, 
     var w = res.written;
     html += '<div class="stats"><div><b>' + res.entries.length + "</b><span>Entries</span></div><div><b>" + res.valid.length + "</b><span>Counted</span></div><div><b>" + res.anmp + "</b><span>ANMP</span></div><div><b>" + res.anp + "</b><span>ANP</span></div></div>" +
       '<p class="hint">Allowed window: ' + esc(Gals.fmt(res.earliest)) + " to " + esc(Gals.fmt(res.latest)) + "." + (w.anmp != null || w.anp != null ? " The GALS says ANMP " + (w.anmp != null ? w.anmp : "?") + " and ANP " + (w.anp != null ? w.anp : "?") + "." : "") + "</p>";
-    var cm = f.findings.length ? f.findings.map(function (x, k) { return commentHtml(x, k + 1, { where: x.where }); }).join("") : '<div class="cmt gals"><div class="t">No GALS mistakes found</div></div>';
+    var gl = shown(f);
+    var cm = gl.length ? gl.map(function (x, k) { return commentHtml(x, k + 1, { where: x.where || (x.quote ? "" : "Whole file") }); }).join("") : '<div class="cmt gals"><div class="t">No GALS mistakes found</div></div>';
     var flagMap = {}; res.entries.forEach(function (e) { if (e.flags.length) flagMap[e.row] = e.flags.map(function (x) { return x.text; }).join("; "); });
     var grid = f.grids[f.sheet], cols = f.headers.length;
     var table = '<div class="tablebox"><table><thead><tr><th>Row</th>' + f.headers.map(function (h) { return "<th>" + esc(h) + "</th>"; }).join("") + "<th>Comment</th></tr></thead><tbody>" +
@@ -1035,7 +1237,7 @@ if (typeof module !== "undefined") module.exports = { Gals: Gals, Marks: Marks, 
 
   $("copyBtn").addEventListener("click", function () {
     var f = state.post.filter(function (x) { return x.id === state.view; })[0]; if (!f) return;
-    var lines = (f.findings || []).map(function (x, k) { return (k + 1) + ". [" + x.severity + "] " + x.mistake + (x.quote ? ' ("' + x.quote + '")' : x.where ? " (" + x.where + ")" : "") + ": " + x.why + (x.fix ? " Fix: " + x.fix : ""); });
+    var lines = shown(f).map(function (x, k) { return (k + 1) + ". [" + x.severity + "] " + x.mistake + (x.quote ? ' ("' + x.quote + '")' : x.where ? " (" + x.where + ")" : "") + ": " + x.why + (x.fix ? " Fix: " + x.fix : ""); });
     var text = f.name + "\n" + (lines.length ? lines.join("\n") : "No mistakes found.");
     var done = function () { $("copyStatus").textContent = "Copied " + lines.length + " comments"; };
     var fail = function () { $("copyFallback").hidden = false; $("copyFallback").value = text; $("copyFallback").rows = Math.min(14, lines.length + 2); $("copyFallback").select(); $("copyStatus").textContent = "Select the text below and copy it"; };
@@ -1043,7 +1245,7 @@ if (typeof module !== "undefined") module.exports = { Gals: Gals, Marks: Marks, 
   });
 
   function render() {
-    renderFileLists(); renderTally(); renderTabs(); renderView();
+    renderFileLists(); renderTemplates(); renderTally(); renderTabs(); renderView();
     $("exampleBanner").hidden = !state.isExample;
   }
 
