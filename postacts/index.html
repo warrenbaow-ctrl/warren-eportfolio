@@ -1,0 +1,1054 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Post-Acts Checker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lexend:wght@500;600;700&family=Source+Sans+3:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+<style>
+/* Layout: JEMA green band, a row of three input cards (Pre-Acts, Post-Acts, event details), then a full-width review area with one tab per file: document on the left, numbered comments on the right. */
+:root {
+  --bg: #f2f5f1;
+  --surface: #ffffff;
+  --sunk: #e8eee8;
+  --ink: #15241e;
+  --muted: #5a6b62;
+  --line: #d3ddd6;
+  --accent: #1f5a45;
+  --accent-ink: #ffffff;
+  --band: #1c4a3b;
+  --band-2: #4e8a52;
+  --band-ink: #eef6ea;
+  --lime: #d2e67c;
+  --hl: #fff0a8;
+  --hl-major: #ffd6d0;
+  --major: #b42318;
+  --major-bg: #fdecea;
+  --minor: #9a6212;
+  --minor-bg: #fdf3e2;
+  --ok: #2b7a4b;
+  --ok-bg: #e6f4ea;
+  --font-display: "Lexend", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e1814; --surface: #15221d; --sunk: #1b2b25; --ink: #e5eee8; --muted: #9bb0a5; --line: #2a3d35;
+    --accent: #86c9a0; --accent-ink: #0e1814; --band: #133429; --band-2: #2f5d3b; --band-ink: #e7f1e3; --lime: #cfe57a;
+    --hl: #5a4c12; --hl-major: #5c231d;
+    --major: #f08a80; --major-bg: #3a1d1a; --minor: #e7b65a; --minor-bg: #33291a; --ok: #74cf98; --ok-bg: #173226;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e1814; --surface: #15221d; --sunk: #1b2b25; --ink: #e5eee8; --muted: #9bb0a5; --line: #2a3d35;
+  --accent: #86c9a0; --accent-ink: #0e1814; --band: #133429; --band-2: #2f5d3b; --band-ink: #e7f1e3; --lime: #cfe57a;
+  --hl: #5a4c12; --hl-major: #5c231d;
+  --major: #f08a80; --major-bg: #3a1d1a; --minor: #e7b65a; --minor-bg: #33291a; --ok: #74cf98; --ok-bg: #173226;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { color-scheme: light; }
+@media (prefers-color-scheme: dark) { html { color-scheme: dark; } }
+body { margin: 0; }
+input[type=password], input[type=text] { font: inherit; font-size: 15px; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 7px 9px; width: 100%; min-width: 0; }
+.keyrow { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 10px; margin-top: 12px; }
+@media (max-width: 600px) { .keyrow { grid-template-columns: minmax(0, 1fr); } }
+.check { display: flex; gap: 8px; align-items: center; font-size: 14px; color: var(--muted); margin-top: 10px; }
+a { color: var(--accent); }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 16px; line-height: 1.5; }
+.wrap { max-width: 1240px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+header.band { background: linear-gradient(120deg, var(--band) 0%, var(--band) 45%, var(--band-2) 100%); color: var(--band-ink); }
+header.band .wrap { padding-block: 26px 28px; }
+.eyebrow { font-family: var(--font-display); font-weight: 600; font-size: 13px; letter-spacing: .08em; text-transform: uppercase; opacity: .85; margin: 0 0 6px; }
+h1 { font-family: var(--font-display); font-weight: 700; font-size: clamp(28px, 5vw, 40px); line-height: 1.1; margin: 0; color: var(--lime); text-wrap: balance; }
+.band p.lead { margin: 8px 0 0; max-width: 68ch; opacity: .92; }
+
+main .wrap { padding-block: 22px 48px; display: flex; flex-direction: column; gap: 20px; }
+.inputs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; align-items: start; }
+@media (max-width: 960px) { .inputs { grid-template-columns: minmax(0, 1fr); } }
+
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 18px; min-width: 0; }
+h2 { font-family: var(--font-display); font-weight: 600; font-size: 17px; margin: 0; display: flex; align-items: baseline; gap: 10px; }
+h2 .step { font-family: var(--font-mono); font-size: 13px; color: var(--accent); font-weight: 600; }
+h3 { font-family: var(--font-display); font-weight: 600; font-size: 15px; margin: 0; }
+.hint { color: var(--muted); font-size: 14px; margin: 4px 0 0; }
+.grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 12px; }
+label.f { display: flex; flex-direction: column; gap: 4px; font-size: 13px; font-weight: 600; color: var(--muted); letter-spacing: .02em; min-width: 0; }
+input[type=date], input[type=time], input[type=number], select, textarea {
+  font: inherit; font-size: 15px; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 7px 9px; width: 100%; min-width: 0;
+}
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.drop { margin-top: 12px; border: 1.5px dashed var(--line); border-radius: 8px; padding: 16px; text-align: center; background: var(--sunk); cursor: pointer; display: block; transition: border-color .15s, background .15s; }
+.drop.over { border-color: var(--accent); background: var(--ok-bg); }
+.drop strong { font-family: var(--font-display); font-weight: 600; }
+.drop .types { display: block; color: var(--muted); font-size: 13px; margin-top: 2px; }
+.drop input { display: none; }
+
+ul.files { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+ul.files li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 8px; align-items: center; background: var(--sunk); border-radius: 6px; padding: 6px 6px 6px 10px; font-size: 14px; }
+ul.files .nm { font-family: var(--font-mono); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+ul.files .sub { grid-column: 1; color: var(--muted); font-size: 12px; }
+ul.files button { grid-row: 1 / span 2; grid-column: 2; font: inherit; font-size: 13px; background: transparent; border: 1px solid var(--line); color: var(--muted); border-radius: 6px; padding: 3px 9px; cursor: pointer; }
+
+.btn { font: inherit; font-family: var(--font-display); font-weight: 600; font-size: 15px; border-radius: 8px; padding: 11px 18px; border: 1px solid var(--accent); background: var(--accent); color: var(--accent-ink); cursor: pointer; }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+.btn.ghost { background: transparent; color: var(--accent); }
+.btn.small { font-size: 13px; padding: 5px 10px; border-radius: 6px; }
+.row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+
+.runbar { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center; justify-content: space-between; }
+ol.log { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; font-size: 14px; }
+ol.log li { display: flex; gap: 8px; align-items: baseline; }
+ol.log li::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--line); flex: none; transform: translateY(-1px); }
+ol.log li.run::before { background: var(--minor); }
+ol.log li.done::before { background: var(--ok); }
+ol.log li.err::before { background: var(--major); }
+ol.log li.err { color: var(--major); }
+
+.example { background: var(--minor-bg); color: var(--minor); border-radius: 8px; padding: 10px 14px; font-size: 14px; font-weight: 600; }
+
+.tally { display: flex; gap: 8px; flex-wrap: wrap; }
+.pill { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; border-radius: 999px; padding: 2px 10px; letter-spacing: .02em; white-space: nowrap; }
+.pill.major { background: var(--major-bg); color: var(--major); }
+.pill.minor { background: var(--minor-bg); color: var(--minor); }
+.pill.ok { background: var(--ok-bg); color: var(--ok); }
+.pill.gals { background: var(--sunk); color: var(--ink); }
+
+.tabs { display: flex; gap: 6px; overflow-x: auto; border-bottom: 1px solid var(--line); margin: 14px -18px 0; padding: 0 18px; }
+.tabs button { font: inherit; font-size: 14px; font-weight: 600; background: transparent; border: 0; border-bottom: 3px solid transparent; color: var(--muted); padding: 9px 10px 8px; cursor: pointer; display: inline-flex; gap: 8px; align-items: center; white-space: nowrap; }
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+.tabs .cnt { font-family: var(--font-mono); font-size: 12px; background: var(--sunk); border-radius: 999px; padding: 0 7px; }
+.tabs .cnt.has { background: var(--major-bg); color: var(--major); }
+
+.viewer { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 340px); gap: 18px; margin-top: 16px; align-items: start; }
+@media (max-width: 860px) { .viewer { grid-template-columns: minmax(0, 1fr); } }
+.paper { background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 18px 20px; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 15px; line-height: 1.6; max-height: 78vh; overflow-y: auto; min-width: 0; }
+.paper mark { background: var(--hl); color: inherit; border-radius: 3px; padding: 1px 0; cursor: pointer; }
+.paper mark.major { background: var(--hl-major); }
+.paper mark.flash { outline: 2px solid var(--accent); }
+.paper mark sup { font-family: var(--font-mono); font-size: 10px; font-weight: 600; background: var(--ink); color: var(--surface); border-radius: 4px; padding: 0 4px; margin-left: 2px; }
+.comments { display: flex; flex-direction: column; gap: 10px; min-width: 0; max-height: 78vh; overflow-y: auto; }
+.cmt { border: 1px solid var(--line); border-left: 4px solid var(--minor); border-radius: 8px; padding: 10px 12px; background: var(--surface); font-size: 14px; cursor: pointer; }
+.cmt.major { border-left-color: var(--major); }
+.cmt.gals { border-left-color: var(--accent); }
+.cmt.flash { outline: 2px solid var(--accent); }
+.cmt .hd { display: flex; gap: 8px; align-items: center; justify-content: space-between; }
+.cmt .num { font-family: var(--font-mono); font-size: 12px; font-weight: 600; background: var(--ink); color: var(--surface); border-radius: 4px; padding: 0 5px; }
+.cmt .t { font-weight: 700; margin-top: 4px; }
+.cmt .why { margin-top: 2px; }
+.cmt .fix { margin-top: 4px; }
+.cmt .fix b { color: var(--accent); }
+.cmt .loose { margin-top: 4px; color: var(--muted); font-size: 12px; }
+
+.stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; margin-top: 14px; }
+@media (max-width: 480px) { .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.stats div { background: var(--surface); padding: 10px 12px; }
+.stats b { display: block; font-family: var(--font-mono); font-size: 22px; font-variant-numeric: tabular-nums; }
+.stats span { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+
+.tablebox { overflow: auto; max-height: 70vh; margin-top: 12px; border: 1px solid var(--line); border-radius: 8px; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+th, td { text-align: left; padding: 6px 9px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th { position: sticky; top: 0; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); background: var(--sunk); }
+td.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+tr.bad td { background: var(--hl); }
+td.note { white-space: normal; min-width: 220px; font-weight: 600; }
+
+dl.details { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 6px 14px; margin: 12px 0 0; font-size: 14px; }
+dl.details dt { color: var(--muted); font-weight: 600; }
+dl.details dd { margin: 0; }
+ul.plain { margin: 8px 0 0; padding-left: 20px; font-size: 14px; color: var(--muted); }
+.status { font-family: var(--font-mono); font-size: 13px; color: var(--muted); }
+.copybox { width: 100%; margin-top: 8px; font-size: 13px; }
+.empty { padding: 28px 8px; text-align: center; color: var(--muted); }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; scroll-behavior: auto !important; } }
+</style>
+</head>
+<body>
+<header class="band">
+  <div class="wrap">
+    <p class="eyebrow">51st JEMA · Documentations</p>
+    <h1>Post-Acts Checker</h1>
+    <p class="lead">Drop the scanned Pre-Acts and the Post-Acts files. Each Post-Acts file comes back with its mistakes highlighted and a comment on why, based on the CSO mistakes list.</p>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+    <section class="panel" aria-label="Gemini key">
+      <h2>Gemini API key</h2>
+      <p class="hint">Each person uses their own key. Get one free at <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a>. The key is only sent to Google and is never shared with anyone else.</p>
+      <div class="keyrow">
+        <label class="f">API key<input type="password" id="apiKey" autocomplete="off" placeholder="Paste your key here"></label>
+        <label class="f">Model<input type="text" id="apiModel" value="gemini-3.8-flash" spellcheck="false"></label>
+      </div>
+      <label class="check"><input type="checkbox" id="rememberKey"> Remember the key on this device</label>
+    </section>
+
+    <section class="inputs" aria-label="Files">
+      <div class="panel">
+        <h2><span class="step">01</span>Approved Pre-Acts</h2>
+        <p class="hint">The scanned file. Photos of each page also work.</p>
+        <label class="drop" id="preDrop" for="preFile">
+          <strong>Drop Pre-Acts</strong><span class="types">.pdf · .jpg · .png · .docx</span>
+          <input type="file" id="preFile" accept=".pdf,.docx,.txt,image/jpeg,image/png,image/webp" multiple>
+        </label>
+        <ul class="files" id="preList"></ul>
+      </div>
+
+      <div class="panel">
+        <h2><span class="step">02</span>Post-Acts files</h2>
+        <p class="hint">Report, GALS, LOP, JL or AMT. Download Google Docs as Word and the GALS as .xlsx.</p>
+        <label class="drop" id="postDrop" for="postFile">
+          <strong>Drop Post-Acts files</strong><span class="types">.docx · .pdf · .xlsx · .csv · images</span>
+          <input type="file" id="postFile" accept=".pdf,.docx,.txt,.xlsx,.xls,.csv,image/jpeg,image/png,image/webp" multiple>
+        </label>
+        <ul class="files" id="postList"></ul>
+      </div>
+
+      <div class="panel">
+        <h2><span class="step">03</span>Event details</h2>
+        <p class="hint">Filled in from the Pre-Acts when you run the check. Fix them if they're wrong and the GALS rechecks right away.</p>
+        <div class="grid2">
+          <label class="f">First day<input type="date" id="evStartDate"></label>
+          <label class="f">Start time<input type="time" id="evStartTime"></label>
+          <label class="f">Last day<input type="date" id="evEndDate"></label>
+          <label class="f">Early entries (mins)<input type="number" id="evEarly" min="0" step="5" value="60"></label>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" aria-label="Run">
+      <div class="runbar">
+        <div class="row">
+          <button class="btn" id="runBtn" type="button">Check Post-Acts</button>
+          <button class="btn ghost" id="stopBtn" type="button" hidden>Stop</button>
+          <span class="status" id="runStatus"></span>
+        </div>
+        <div class="tally" id="tally"></div>
+      </div>
+      <ol class="log" id="log" hidden></ol>
+    </section>
+
+    <section class="panel" aria-label="Review">
+      <div class="row" style="justify-content:space-between">
+        <h2>Review</h2>
+        <div class="row">
+          <button class="btn ghost small" id="copyBtn" type="button">Copy comments for this file</button>
+          <span class="status" id="copyStatus"></span>
+        </div>
+      </div>
+      <div id="exampleBanner" class="example" style="margin-top:12px">Example. These files are made up so you can see how the review looks. Drop your own files to replace them.</div>
+      <textarea id="copyFallback" class="copybox" readonly hidden></textarea>
+      <div class="tabs" role="tablist" id="tabs"></div>
+      <div id="view"></div>
+    </section>
+
+    <section class="panel" aria-label="Manual checks">
+      <h3>Check these by hand</h3>
+      <p class="hint">These depend on settings or formatting that the file text does not carry.</p>
+      <ul class="plain">
+        <li>GALS gives editing access to all DLSU email addresses, with "Viewers and commenters can see the option to download, print and copy" turned on.</li>
+        <li>JEMA header and footer are on every page, using the 51st ADM template.</li>
+        <li>Boldface and italicized text follow the template.</li>
+        <li>Signatures are actually signed, not just a name line.</li>
+      </ul>
+    </section>
+  </div>
+</main>
+
+<script id="logic">
+// ---------- Pure GALS logic (no DOM) ----------
+var Gals = (function () {
+  function pad(n) { return String(n).padStart(2, "0"); }
+  function fmt(d) {
+    if (!(d instanceof Date) || isNaN(d)) return "";
+    var h = d.getHours(), ap = h >= 12 ? "PM" : "AM", h12 = h % 12 || 12;
+    return (d.getMonth() + 1) + "/" + d.getDate() + "/" + d.getFullYear() + " " + h12 + ":" + pad(d.getMinutes()) + ":" + pad(d.getSeconds()) + " " + ap;
+  }
+  function dayKey(d) { return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()); }
+  function parseStamp(v) {
+    if (v instanceof Date) return isNaN(v) ? null : v;
+    if (typeof v === "number" && v > 20000 && v < 80000) {
+      var u = new Date(Math.round((v - 25569) * 86400000));
+      return new Date(u.getUTCFullYear(), u.getUTCMonth(), u.getUTCDate(), u.getUTCHours(), u.getUTCMinutes(), u.getUTCSeconds());
+    }
+    if (typeof v !== "string") return null;
+    var s = v.trim();
+    if (!s) return null;
+    var m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:[ T,]+(\d{1,2}):(\d{2})(?::(\d{2}))?\s*([AaPp][Mm])?)?$/);
+    if (m) {
+      var hh = +(m[4] || 0), ap = m[7] ? m[7].toUpperCase() : "";
+      if (ap === "PM" && hh < 12) hh += 12;
+      if (ap === "AM" && hh === 12) hh = 0;
+      return new Date(+m[3], +m[1] - 1, +m[2], hh, +(m[5] || 0), +(m[6] || 0));
+    }
+    m = s.match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2})(?::(\d{2}))?)?/);
+    if (m) return new Date(+m[1], +m[2] - 1, +m[3], +(m[4] || 0), +(m[5] || 0), +(m[6] || 0));
+    return null;
+  }
+  function norm(s) { return String(s == null ? "" : s).trim().toLowerCase().replace(/\s+/g, " "); }
+  function category(v) {
+    var s = norm(v).replace(/[\s_-]/g, "");
+    if (!s) return "blank";
+    if (s.indexOf("nonmember") === 0 || s === "nonjema" || s === "no") return "non";
+    if (s === "member" || s.indexOf("member") === 0 || s === "jemamember" || s === "yes") return "member";
+    return "other";
+  }
+  function guessColumns(headers, rows) {
+    var h = headers.map(norm);
+    function find(tests) { for (var t = 0; t < tests.length; t++) { for (var i = 0; i < h.length; i++) if (tests[t](h[i])) return i; } return -1; }
+    var time = find([function (x) { return x === "timestamp"; }, function (x) { return x.indexOf("timestamp") > -1 || x.indexOf("time stamp") > -1; }]);
+    var email = find([function (x) { return x.indexOf("dlsu email") > -1; }, function (x) { return x.indexOf("email") > -1; }]);
+    var id = find([function (x) { return /\bid\s*(no|number|#)/.test(x); }, function (x) { return x === "id" || x.indexOf("id number") > -1; }]);
+    var member = find([function (x) { return x.indexOf("member") > -1 && x.indexOf("number") === -1; }, function (x) { return x.indexOf("category") > -1 || x.indexOf("status") > -1; }]);
+    if (member === -1) {
+      for (var c = 0; c < headers.length && member === -1; c++) {
+        for (var r = 0; r < Math.min(rows.length, 30); r++) { var k = category(rows[r][c]); if (k === "member" || k === "non") { member = c; break; } }
+      }
+    }
+    var name = find([function (x) { return x === "name" || x === "full name" || x.indexOf("full name") > -1; }, function (x) { return x.indexOf("name") > -1 && x.indexOf("email") === -1; }]);
+    if (time === -1) {
+      for (var c2 = 0; c2 < headers.length && time === -1; c2++) if (rows.slice(0, 10).some(function (r) { return parseStamp(r[c2]); })) time = c2;
+    }
+    return { time: time, member: member, email: email, id: id, name: name };
+  }
+  function findWrittenCounts(grid) {
+    var out = {};
+    for (var r = 0; r < grid.length; r++) for (var c = 0; c < (grid[r] || []).length; c++) {
+      var t = norm(grid[r][c]).replace(/[:=]/g, "").trim();
+      var key = /^anmp\b/.test(t) ? "anmp" : /^anp\b/.test(t) ? "anp" : null;
+      if (!key || out[key] != null) continue;
+      var inline = t.match(/(\d+)\s*$/);
+      if (inline) { out[key] = +inline[1]; continue; }
+      var cands = [(grid[r] || [])[c + 1], (grid[r] || [])[c + 2], (grid[r + 1] || [])[c]];
+      for (var i = 0; i < cands.length; i++) { var n = Number(cands[i]); if (cands[i] !== "" && cands[i] != null && isFinite(n)) { out[key] = n; break; } }
+    }
+    return out;
+  }
+  function check(grid, cols, event) {
+    var entries = [];
+    for (var r = 1; r < grid.length; r++) {
+      var row = grid[r] || [];
+      var ts = cols.time > -1 ? parseStamp(row[cols.time]) : null;
+      if (!ts) continue;
+      entries.push({
+        row: r + 1, ts: ts,
+        email: cols.email > -1 ? norm(row[cols.email]) : "",
+        id: cols.id > -1 ? norm(row[cols.id]).replace(/\s/g, "") : "",
+        name: cols.name > -1 ? String(row[cols.name] || "").trim() : "",
+        cat: cols.member > -1 ? category(row[cols.member]) : "blank",
+        catRaw: cols.member > -1 ? String(row[cols.member] || "").trim() : "",
+        flags: []
+      });
+    }
+    var earliest = new Date(event.start.getTime() - (event.earlyMins || 0) * 60000);
+    var latest = new Date(event.endDay.getFullYear(), event.endDay.getMonth(), event.endDay.getDate(), 23, 59, 59, 999);
+    entries.forEach(function (e) {
+      if (e.ts < earliest) e.flags.push({ code: "early", text: "Made before the allowed time (" + fmt(earliest) + ")" });
+      else if (e.ts > latest) e.flags.push({ code: "late", text: "Made after 11:59 PM of the last day" });
+    });
+    var seen = { email: {}, id: {}, name: {} };
+    entries.forEach(function (e) {
+      if (e.flags.length) return;
+      var dupOf = null, by = null;
+      [["email", e.email], ["id", e.id], ["name", norm(e.name)]].forEach(function (p) {
+        if (dupOf || !p[1]) return;
+        if (seen[p[0]][p[1]]) { dupOf = seen[p[0]][p[1]]; by = p[0] === "id" ? "ID number" : p[0]; }
+      });
+      if (dupOf) { e.flags.push({ code: "dup", text: "Duplicate of row " + dupOf + " (same " + by + ")" }); return; }
+      if (e.email) seen.email[e.email] = e.row;
+      if (e.id) seen.id[e.id] = e.row;
+      if (norm(e.name)) seen.name[norm(e.name)] = e.row;
+    });
+    entries.forEach(function (e) {
+      if (!e.flags.length && cols.member > -1 && (e.cat === "other" || e.cat === "blank")) e.flags.push({ code: "cat", text: "Member category is \"" + (e.catRaw || "blank") + "\", not Member or Non-Member", soft: true });
+    });
+    var valid = entries.filter(function (e) { return !e.flags.some(function (f) { return !f.soft; }); });
+    var anmp = valid.filter(function (e) { return e.cat === "member"; }).length;
+    var nonm = valid.filter(function (e) { return e.cat === "non"; }).length;
+    var days = {};
+    valid.forEach(function (e) { var k = dayKey(e.ts); days[k] = (days[k] || 0) + 1; });
+    return { entries: entries, valid: valid, anmp: anmp, anp: anmp + nonm, nonMembers: nonm, days: days, earliest: earliest, latest: latest, written: findWrittenCounts(grid) };
+  }
+  function findings(res) {
+    var out = [];
+    function has(e, c) { return e.flags.some(function (f) { return f.code === c; }); }
+    var early = res.entries.filter(function (e) { return has(e, "early"); });
+    var late = res.entries.filter(function (e) { return has(e, "late"); });
+    var dups = res.entries.filter(function (e) { return has(e, "dup"); });
+    var cats = res.entries.filter(function (e) { return has(e, "cat"); });
+    function rows(list) { return list.map(function (e) { return e.row; }).join(", "); }
+    if (early.length || late.length) {
+      var parts = [];
+      if (early.length) parts.push(early.length + " made before " + fmt(res.earliest));
+      if (late.length) parts.push(late.length + " made after " + fmt(res.latest));
+      out.push({ severity: "GALS", mistake: "Entries before event start or beyond last day of activity", where: "Row " + rows(early.concat(late)), rows: early.concat(late).map(function (e) { return e.row; }), why: "There are entries outside the allowed time: " + parts.join(" and ") + ".", fix: "Remove these entries from the GALS." });
+    }
+    if (dups.length) {
+      out.push({ severity: "GALS", mistake: "Duplicate entries", where: "Row " + rows(dups), rows: dups.map(function (e) { return e.row; }), why: dups.map(function (e) { var f = e.flags.filter(function (x) { return x.code === "dup"; })[0]; return "Row " + e.row + " is a " + f.text.charAt(0).toLowerCase() + f.text.slice(1); }).join(". ") + ".", fix: "Keep the first entry and remove the repeated ones." });
+    }
+    if ((res.written.anmp != null && res.written.anmp !== res.anmp) || (res.written.anp != null && res.written.anp !== res.anp)) {
+      out.push({ severity: "GALS", mistake: "Incorrect count of ANMP and ANP", where: "Count cells", rows: [], why: "The GALS says ANMP " + (res.written.anmp != null ? res.written.anmp : "?") + " and ANP " + (res.written.anp != null ? res.written.anp : "?") + ". After removing invalid entries it should be ANMP " + res.anmp + " and ANP " + res.anp + ".", fix: "Use countif on the Member column for ANMP. ANP is Members plus Non-Members." });
+    }
+    var dayKeys = Object.keys(res.days);
+    if (dayKeys.length > 1) out.push({ severity: "GALS", mistake: "One GALS covers several dates", where: dayKeys.join(", "), rows: [], why: "Multiple-date activities need a separate GALS per day.", fix: "Split the GALS into one sheet per day." });
+    if (cats.length) out.push({ severity: "Note", mistake: "Unclear member category", where: "Row " + rows(cats), rows: cats.map(function (e) { return e.row; }), why: "These rows are not marked Member or Non-Member, so they are not in ANMP or ANP.", fix: "Check the answers and fix the category if needed." });
+    return out;
+  }
+  return { parseStamp: parseStamp, guessColumns: guessColumns, check: check, findings: findings, fmt: fmt, category: category };
+})();
+
+// ---------- Pure highlight logic: find each finding's quote in the document text ----------
+var Marks = (function () {
+  function escRe(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }
+  function locate(text, quote) {
+    var q = String(quote || "").trim().replace(/^["“”']+|["“”']+$/g, "");
+    if (q.length < 2) return null;
+    var i = text.indexOf(q);
+    if (i > -1) return [i, i + q.length];
+    var pat = q.split(/\s+/).map(function (w) { return escRe(w.replace(/[“”]/g, '"').replace(/[‘’]/g, "'")).replace(/"/g, '["“”]').replace(/'/g, "['‘’]"); }).join("[\\s|]+");
+    var m;
+    try { m = new RegExp(pat, "i").exec(text); } catch (e) { m = null; }
+    if (m) return [m.index, m.index + m[0].length];
+    var words = q.split(/\s+/);
+    if (words.length > 6) {
+      var head = words.slice(0, 5).map(escRe).join("[\\s|]+");
+      try { m = new RegExp(head, "i").exec(text); } catch (e) { m = null; }
+      if (m) {
+        var tailEnd = text.indexOf("\n", m.index + m[0].length);
+        return [m.index, tailEnd > -1 ? tailEnd : text.length];
+      }
+    }
+    return null;
+  }
+  // findings: [{quote, severity}] -> {ranges:[{start,end,ids:[n],major}], loose:[n]}  (n = 1-based finding number)
+  function plan(text, findings) {
+    var ranges = [], loose = [];
+    findings.forEach(function (f, k) {
+      var n = k + 1, at = locate(text, f.quote);
+      if (!at) { loose.push(n); return; }
+      var hit = ranges.filter(function (r) { return at[0] < r.end && at[1] > r.start; })[0];
+      if (hit) { hit.ids.push(n); hit.major = hit.major || f.severity === "Major"; hit.start = Math.min(hit.start, at[0]); hit.end = Math.max(hit.end, at[1]); return; }
+      ranges.push({ start: at[0], end: at[1], ids: [n], major: f.severity === "Major" });
+    });
+    ranges.sort(function (a, b) { return a.start - b.start; });
+    var merged = [];
+    ranges.forEach(function (r) { var last = merged[merged.length - 1]; if (last && r.start < last.end) { last.end = Math.max(last.end, r.end); last.ids = last.ids.concat(r.ids); last.major = last.major || r.major; } else merged.push(r); });
+    return { ranges: merged, loose: loose };
+  }
+  return { locate: locate, plan: plan };
+})();
+
+// ---------- Pure exact comparison: objectives, ENP/ENMP vs Pre-Acts, ANP/ANMP vs GALS ----------
+var Exact = (function () {
+  function clean(s) { return String(s == null ? "" : s).replace(/[“”]/g, '"').replace(/[‘’]/g, "'").replace(/\s+/g, " ").trim().replace(/^(?:objective\s*)?(?:\(?\d+[.):]|[-•*])\s*/i, "").trim(); }
+  function num(s) { var m = String(s == null ? "" : s).replace(/,/g, "").match(/\d+/); return m ? +m[0] : null; }
+  // Describes where two texts differ, in plain words.
+  function diff(a, b) {
+    var x = clean(a).split(" "), y = clean(b).split(" "), n = x.length, m = y.length, i, j;
+    var L = []; for (i = 0; i <= n; i++) { L.push(new Array(m + 1).fill(0)); }
+    for (i = n - 1; i >= 0; i--) for (j = m - 1; j >= 0; j--) L[i][j] = x[i] === y[j] ? L[i + 1][j + 1] + 1 : Math.max(L[i + 1][j], L[i][j + 1]);
+    var chunks = [], cur = null; i = 0; j = 0;
+    function flush() { if (cur) { chunks.push(cur); cur = null; } }
+    while (i < n || j < m) {
+      if (i < n && j < m && x[i] === y[j]) { flush(); i++; j++; }
+      else if (j < m && (i >= n || L[i][j + 1] >= L[i + 1][j])) { cur = cur || { from: [], to: [] }; cur.to.push(y[j++]); }
+      else { cur = cur || { from: [], to: [] }; cur.from.push(x[i++]); }
+    }
+    flush();
+    if (!chunks.length) return "";
+    return chunks.slice(0, 3).map(function (c) {
+      var f = c.from.join(" "), t = c.to.join(" ");
+      if (f && t) return 'The PPR says "' + f + '" but the report says "' + t + '".';
+      if (f) return 'The report leaves out "' + f + '".';
+      return 'The report adds "' + t + '".';
+    }).join(" ") + (chunks.length > 3 ? " There are more differences." : "");
+  }
+  // pre: {objectives:[], enp, enmp}; rf: {objectives:[], enp, enmp, anp, anmp, attendance_quote}; gals: {anp, anmp} or null
+  function fields(pre, rf, gals) {
+    var out = [];
+    if (!rf) return out;
+    var po = (pre && Array.isArray(pre.objectives) ? pre.objectives : []).map(String).filter(function (s) { return clean(s); });
+    var ro = (Array.isArray(rf.objectives) ? rf.objectives : []).map(String).filter(function (s) { return clean(s); });
+    if (po.length) {
+      if (!ro.length) out.push({ severity: "Major", mistake: "Missing all objectives and explanations", quote: "", why: "The report has no objectives but the PPR has " + po.length + ".", fix: "Copy all the objectives word for word from the approved PPR." });
+      else {
+        for (var k = 0; k < Math.max(po.length, ro.length); k++) {
+          var n = k + 1;
+          if (k >= ro.length) out.push({ severity: "Minor", mistake: "Objective # " + n + " inconsistent with PPR", quote: ro[ro.length - 1], why: "Objective " + n + ' from the PPR is missing in the report. The PPR says "' + clean(po[k]) + '".', fix: "Add Objective " + n + " copied word for word from the PPR." });
+          else if (k >= po.length) out.push({ severity: "Minor", mistake: "Objective # " + n + " inconsistent with PPR", quote: ro[k], why: "The PPR only has " + po.length + " objectives so this one is extra.", fix: "Remove it or check it against the approved PPR." });
+          else if (clean(po[k]) !== clean(ro[k])) out.push({ severity: "Minor", mistake: "Objective # " + n + " inconsistent with PPR", quote: ro[k], why: diff(po[k], ro[k]) || "The wording is different from the PPR.", fix: 'Change it to exactly "' + clean(po[k]) + '"' });
+        }
+      }
+    }
+    var aq = String(rf.attendance_quote || "");
+    [["enp", "ENP"], ["enmp", "ENMP"]].forEach(function (p) {
+      var a = num(pre && pre[p[0]]), b = num(rf[p[0]]);
+      if (a == null) return;
+      if (b == null) out.push({ severity: "Minor", mistake: "ENP/ENMP inconsistent with PPR", quote: aq, why: p[1] + " is not written in the report. The PPR says " + a + ".", fix: "Write " + p[1] + " as " + a + "." });
+      else if (a !== b) out.push({ severity: "Minor", mistake: "ENP/ENMP inconsistent with PPR", quote: aq, why: "The report says " + p[1] + " " + b + " but the PPR says " + a + ".", fix: "Change " + p[1] + " to " + a + "." });
+    });
+    if (gals) {
+      [["anp", "ANP"], ["anmp", "ANMP"]].forEach(function (p) {
+        var a = gals[p[0]], b = num(rf[p[0]]);
+        if (b == null) out.push({ severity: "Minor", mistake: "Incorrect ANP/ANMP count", quote: aq, why: p[1] + " is not written in the report. The GALS gives " + a + ".", fix: "Write " + p[1] + " as " + a + "." });
+        else if (a !== b) out.push({ severity: "Minor", mistake: "Incorrect ANP/ANMP count", quote: aq, why: "The report says " + p[1] + " " + b + " but the GALS gives " + a + " after removing invalid entries.", fix: "Change " + p[1] + " to " + a + "." });
+      });
+    }
+    return out;
+  }
+  return { clean: clean, diff: diff, fields: fields };
+})();
+if (typeof module !== "undefined") module.exports = { Gals: Gals, Marks: Marks, Exact: Exact };
+</script>
+
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+  var uid = 0;
+
+  // ---------- State ----------
+  var state = {
+    isExample: true,
+    pre: { files: [], text: "", images: [], details: null },
+    post: [],          // {id, name, kind:'doc'|'gals', text, images, grids, sheet, headers, cols, res, findings, docType, cannot, checked}
+    view: "pre",
+    eventTouched: false,
+    busy: false
+  };
+
+  // ---------- Example (made up, labelled on the page) ----------
+  var EX_GALS = [
+    ["Timestamp", "Email Address", "Full Name", "ID Number", "Membership Status"],
+    ["10/17/2026 11:20:05", "andrea_lim@dlsu.edu.ph", "Andrea Lim", "12312345", "Member"],
+    ["10/17/2026 12:15:40", "paolo_reyes@dlsu.edu.ph", "Paolo Reyes", "12398765", "Member"],
+    ["10/17/2026 13:02:11", "bea_santos@dlsu.edu.ph", "Bea Santos", "12455221", "Non-Member"],
+    ["10/17/2026 13:03:48", "marco_tan@dlsu.edu.ph", "Marco Tan", "12233441", "Member"],
+    ["10/17/2026 13:05:02", "janelle_cruz@dlsu.edu.ph", "Janelle Cruz", "12577312", "Non-Member"],
+    ["10/17/2026 13:06:30", "miguel_uy@dlsu.edu.ph", "Miguel Uy", "12311009", "Member"],
+    ["10/17/2026 13:09:14", "paolo_reyes@dlsu.edu.ph", "Paolo Reyes", "12398765", "Member"],
+    ["10/17/2026 15:41:57", "kyla_dizon@dlsu.edu.ph", "Kyla Dizon", "12466780", "Member"],
+    ["10/17/2026 16:02:33", "rafael_go@dlsu.edu.ph", "Rafael Go", "12290034", "Non-Member"],
+    ["10/18/2026 0:14:09", "trisha_ong@dlsu.edu.ph", "Trisha Ong", "12588821", "Member"],
+    ["", "", "", "", ""],
+    ["ANMP", 6, "", "", ""],
+    ["ANP", 9, "", "", ""]
+  ];
+  var EX_REPORT = [
+    "JUNIOR ENTREPRENEURS' MARKETING ASSOCIATION",
+    "POST-ACTIVITY REPORT",
+    "",
+    "Activity Title: JEMA Talks: Brand Building 101",
+    "ARN: 0000-EXAMPLE",
+    "Date: October 17, 2026",
+    "Venue: Room 512, Example Hall",
+    "Project Head: Juan Dela Cruz | 09171234567 juan_delacruz@dlsu.edu.ph",
+    "",
+    "OBJECTIVES",
+    "1. To teach members the basics of building a personal brand.",
+    "2. To let participants meet young marketing professionals.",
+    "",
+    "ATTENDANCE",
+    "| | ENP | ANP | ENMP | ANMP |",
+    "| Count | 60 | 9 | 40 | 6 |",
+    "",
+    "WHAT WENT WELL",
+    "1. The speakers explained the topics clearly.",
+    "2. Very active audience during the open forum.",
+    "3. The Project Heads carried the JEMA blocks to the venue without any difficulty.",
+    "",
+    "WHAT WENT WRONG",
+    "1. The event started 15 minutes late.",
+    "2. The microphone stopped working during the second talk.",
+    "3. The participants were not able to finish the activity sheet.",
+    "",
+    "RECOMMENDATIONS",
+    "1. Invite more speakers next time.",
+    "2. Test the microphones before the event starts.",
+    "3. Give the activity sheet more time in the program."
+  ].join("\n");
+  var EX_FINDINGS = [
+    { severity: "Major", mistake: "Contact no. and emails are not separated", quote: "09171234567 juan_delacruz@dlsu.edu.ph", why: "The contact number and the email are written together in one line.", fix: "Put the contact number and the DLSU email in separate lines or cells." },
+    { severity: "Minor", mistake: "Objective # 1 inconsistent with PPR", quote: "To teach members the basics of building a personal brand.", why: "The approved PPR says \"To teach participants the basics of personal branding.\"", fix: "Copy Objective 1 word for word from the approved PPR." },
+    { severity: "Minor", mistake: "Incorrect ANP/ANMP count", quote: "| Count | 60 | 9 | 40 | 6 |", why: "The GALS has ANP 7 and ANMP 4 after removing the early, late and duplicate entries.", fix: "Change ANP to 7 and ANMP to 4." },
+    { severity: "Major", mistake: "Less than 3 entries for What Went Well", quote: "WHAT WENT WELL", why: "Only 2 entries are within the activity proper since entry 3 happened before the event.", fix: "Add one more What Went Well entry that happened during the activity." },
+    { severity: "Minor", mistake: "Does not follow subject-predicate form", quote: "Very active audience during the open forum.", why: "This has no verb so it is not a full sentence.", fix: "Write it as \"The audience was very active during the open forum.\"" },
+    { severity: "Minor", mistake: "What Went Well # 3 is outside activity proper", quote: "The Project Heads carried the JEMA blocks to the venue without any difficulty.", why: "Carrying the blocks to the venue happened before the activity started.", fix: "Keep it only as an extra entry and add another one from the activity proper." },
+    { severity: "Minor", mistake: "Recommendations do not match What Went Well/What Went Wrong entry", quote: "Invite more speakers next time.", why: "Recommendation 1 should answer What Went Wrong 1, which is about the late start.", fix: "Write a recommendation about starting on time, like setting an earlier call time for the committee." }
+  ];
+  function loadExample() {
+    state.isExample = true;
+    state.pre = { files: [{ name: "example-pre-acts.pdf", sub: "made-up file" }], text: "[PAGE 1]\nPROJECT PROPOSAL (EXAMPLE)\nActivity Title: JEMA Talks: Brand Building 101\nDate: October 17, 2026, 1:00 PM to 4:00 PM\nVenue: Room 512, Example Hall\nENP: 60  ENMP: 40\nObjectives:\n1. To teach participants the basics of personal branding.\n2. To let participants meet young marketing professionals.", images: [], details: { event_title: "JEMA Talks: Brand Building 101", arn: "0000-EXAMPLE", dates: ["2026-10-17"], start_time: "13:00", end_time: "16:00", venue: "Room 512, Example Hall", enp: "60", enmp: "40", objectives: ["To teach participants the basics of personal branding.", "To let participants meet young marketing professionals."], project_heads: ["Juan Dela Cruz"] } };
+    var g = { id: "f" + (++uid), name: "example-gals.xlsx", kind: "gals", grids: [EX_GALS], sheetNames: ["Responses"], sheet: 0, docType: "GALS", checked: true };
+    var r = { id: "f" + (++uid), name: "example-post-activity-report.docx", kind: "doc", text: EX_REPORT, images: [], findings: EX_FINDINGS, docType: "Post-Activity Report", cannot: [], checked: true };
+    state.post = [r, g];
+    $("evStartDate").value = "2026-10-17"; $("evStartTime").value = "13:00"; $("evEndDate").value = "2026-10-17";
+    prepGals(g);
+    state.view = r.id;
+  }
+  function clearExample() {
+    if (!state.isExample) return;
+    state.isExample = false;
+    state.pre = { files: [], text: "", images: [], details: null };
+    state.post = [];
+    state.view = "pre";
+    ["evStartDate", "evStartTime", "evEndDate"].forEach(function (id) { $(id).value = ""; });
+    state.eventTouched = false;
+  }
+
+  // ---------- Event details ----------
+  function readEvent() {
+    var sd = $("evStartDate").value, st = $("evStartTime").value || "00:00", ed = $("evEndDate").value || sd;
+    if (!sd) return null;
+    var a = sd.split("-"), t = st.split(":"), b = ed.split("-");
+    return { start: new Date(+a[0], +a[1] - 1, +a[2], +t[0], +t[1]), endDay: new Date(+b[0], +b[1] - 1, +b[2]), earlyMins: Math.max(0, +$("evEarly").value || 0) };
+  }
+  ["evStartDate", "evStartTime", "evEndDate", "evEarly"].forEach(function (id) {
+    $(id).addEventListener("change", function () {
+      state.eventTouched = true;
+      if (id === "evStartDate" && (!$("evEndDate").value || $("evEndDate").value < this.value)) $("evEndDate").value = this.value;
+      state.post.forEach(function (f) { if (f.kind === "gals") runGals(f); });
+      render();
+    });
+  });
+  function applyDetails(d) {
+    if (!d || state.eventTouched) return;
+    var dates = (Array.isArray(d.dates) ? d.dates : []).filter(function (x) { return /^\d{4}-\d{2}-\d{2}$/.test(String(x)); }).sort();
+    if (dates.length) { $("evStartDate").value = dates[0]; $("evEndDate").value = dates[dates.length - 1]; }
+    if (/^\d{2}:\d{2}$/.test(String(d.start_time || ""))) $("evStartTime").value = d.start_time;
+  }
+
+  // ---------- GALS ----------
+  function prepGals(f) {
+    var grid = f.grids[f.sheet] || [];
+    f.headers = (grid[0] || []).map(function (h, i) { return String(h || "").trim() || "Column " + (i + 1); });
+    f.cols = Gals.guessColumns(f.headers, grid.slice(1));
+    runGals(f);
+  }
+  function runGals(f) {
+    var ev = readEvent();
+    f.res = null; f.findings = [];
+    if (!ev || f.cols.time < 0) return;
+    f.res = Gals.check(f.grids[f.sheet], f.cols, ev);
+    f.findings = Gals.findings(f.res);
+  }
+
+  // ---------- File reading ----------
+  function htmlToText(html) {
+    var doc = new DOMParser().parseFromString(html, "text/html");
+    doc.querySelectorAll("table").forEach(function (t) {
+      var lines = Array.prototype.map.call(t.querySelectorAll("tr"), function (tr) { return "| " + Array.prototype.map.call(tr.children, function (td) { return td.textContent.replace(/\s+/g, " ").trim(); }).join(" | ") + " |"; });
+      var p = doc.createElement("pre"); p.textContent = "\n" + lines.join("\n") + "\n"; t.replaceWith(p);
+    });
+    doc.querySelectorAll("p, h1, h2, h3, h4, h5, li, pre").forEach(function (el) { el.append("\n"); });
+    return doc.body.textContent.replace(/\n{3,}/g, "\n\n").trim();
+  }
+  function canvasBlob(canvas) { return new Promise(function (res) { canvas.toBlob(function (b) { res(b); }, "image/jpeg", 0.85); }); }
+  async function pdfRead(buf) {
+    if (typeof pdfjsLib === "undefined") throw new Error("PDF reader did not load");
+    var pdf = await pdfjsLib.getDocument({ data: new Uint8Array(buf) }).promise;
+    var n = Math.min(pdf.numPages, 30), texts = [], chars = 0;
+    for (var p = 1; p <= n; p++) {
+      var tc = await (await pdf.getPage(p)).getTextContent();
+      var parts = [], last = null;
+      tc.items.forEach(function (it) { var y = Math.round(it.transform[5]); if (last !== null && Math.abs(y - last) > 3) parts.push("\n"); parts.push(it.str); if (it.hasEOL) parts.push("\n"); last = y; });
+      var t = parts.join("").replace(/[ \t]+\n/g, "\n").trim();
+      chars += t.replace(/\s/g, "").length;
+      texts.push("[PAGE " + p + "]\n" + t);
+    }
+    if (chars / n >= 80) return { text: texts.join("\n\n"), images: [], pages: n, cut: pdf.numPages > n };
+    var imgs = [];
+    for (var q = 1; q <= n; q++) {
+      var page = await pdf.getPage(q);
+      var vp1 = page.getViewport({ scale: 1 });
+      var vp = page.getViewport({ scale: Math.min(2.2, 1500 / vp1.width) });
+      var c = document.createElement("canvas"); c.width = Math.round(vp.width); c.height = Math.round(vp.height);
+      await page.render({ canvasContext: c.getContext("2d"), viewport: vp }).promise;
+      imgs.push(await canvasBlob(c));
+    }
+    return { text: "", images: imgs, pages: n, cut: pdf.numPages > n, scanned: true };
+  }
+  async function readAny(file) {
+    var nm = file.name.toLowerCase();
+    if (/\.(xlsx|xls|csv)$/.test(nm)) {
+      if (typeof XLSX === "undefined") throw new Error("Spreadsheet reader did not load");
+      var b = await file.arrayBuffer();
+      var wb = /\.csv$/.test(nm) ? XLSX.read(new TextDecoder().decode(b), { type: "string", raw: true }) : XLSX.read(b, { type: "array", cellDates: true });
+      return { kind: "gals", sheetNames: wb.SheetNames.slice(), grids: wb.SheetNames.map(function (n) { return XLSX.utils.sheet_to_json(wb.Sheets[n], { header: 1, raw: true, defval: "" }); }) };
+    }
+    if (/\.docx$/.test(nm)) {
+      if (typeof mammoth === "undefined") throw new Error("Word reader did not load");
+      var r = await mammoth.convertToHtml({ arrayBuffer: await file.arrayBuffer() });
+      return { kind: "doc", text: htmlToText(r.value), images: [] };
+    }
+    if (/\.pdf$/.test(nm)) { var p = await pdfRead(await file.arrayBuffer()); return { kind: "doc", text: p.text, images: p.images, pages: p.pages, scanned: p.scanned, cut: p.cut }; }
+    if (/^image\//.test(file.type) || /\.(jpe?g|png|webp)$/.test(nm)) return { kind: "doc", text: "", images: [file], pages: 1, scanned: true };
+    if (/\.txt$/.test(nm)) return { kind: "doc", text: await file.text(), images: [] };
+    throw new Error("This file type is not supported");
+  }
+  function describe(f) {
+    if (f.error) return f.error;
+    if (f.kind === "gals") { var g = f.grids[f.sheet] || []; return "Sheet · " + Math.max(0, g.length - 1) + " rows"; }
+    if (f.images && f.images.length && !f.text) return "Scanned · " + f.images.length + " page" + (f.images.length > 1 ? "s" : "") + " · Gemini will read it";
+    return (f.text || "").split(/\s+/).filter(Boolean).length + " words" + (f.cut ? " · first 30 pages" : "");
+  }
+
+  function wireDrop(dropId, inputId, onFiles) {
+    var d = $(dropId), inp = $(inputId);
+    d.addEventListener("dragover", function (e) { e.preventDefault(); d.classList.add("over"); });
+    d.addEventListener("dragleave", function () { d.classList.remove("over"); });
+    d.addEventListener("drop", function (e) { e.preventDefault(); d.classList.remove("over"); if (e.dataTransfer.files.length) onFiles(Array.from(e.dataTransfer.files)); });
+    inp.addEventListener("change", function () { if (inp.files.length) onFiles(Array.from(inp.files)); inp.value = ""; });
+  }
+  wireDrop("preDrop", "preFile", async function (files) {
+    clearExample();
+    for (var i = 0; i < files.length; i++) {
+      var entry = { name: files[i].name, sub: "Reading…" };
+      state.pre.files.push(entry); state.pre.text = ""; state.pre.details = null; render();
+      try {
+        var r = await readAny(files[i]);
+        if (r.kind !== "doc") throw new Error("Drop the GALS in Post-Acts instead");
+        entry.text = r.text; entry.images = r.images;
+        entry.sub = describe(r);
+      } catch (e) { entry.sub = e.message || "Could not read this file"; entry.error = true; }
+      render();
+    }
+  });
+  wireDrop("postDrop", "postFile", async function (files) {
+    clearExample();
+    for (var i = 0; i < files.length; i++) {
+      var f = { id: "f" + (++uid), name: files[i].name, kind: "doc", text: "", images: [], findings: [], sub: "Reading…" };
+      state.post.push(f); render();
+      try {
+        var r = await readAny(files[i]);
+        Object.assign(f, r);
+        if (f.kind === "gals") { f.sheet = 0; f.docType = "GALS"; prepGals(f); }
+        f.sub = describe(f);
+      } catch (e) { f.error = e.message || "Could not read this file"; f.sub = f.error; }
+      render();
+    }
+  });
+
+  // ---------- Gemini ----------
+  var RULES = [
+    "GENERAL MISTAKES (all Minor):",
+    "- Missing/Wrong ARN",
+    "- Missing documents: Pre-acts",
+    "- Wrong template (based on 51st ADM templates)",
+    "- Does not follow subject-predicate form",
+    "- Contact no. and emails not separated",
+    "- Activity details inconsistent with PRE-ACTS",
+    "- Missing JEMA header/footer",
+    "- Wrong arrangement of documents (order: Approved Pre-Acts, Justification Letter if applicable, GALS, List of Pictures (LOP), Post Activity Report, AMT Evaluation if applicable)",
+    "- Missing Project Head/Project Head's Contact no. or DLSU Email Address",
+    "- Not following Boldface and Italicized text",
+    "",
+    "ACTIVITY REPORT, MAJOR:",
+    "- Missing ANP/ANMP table",
+    "- Missing Tie-ups table",
+    "- Contact no. and emails are not separated",
+    "- Missing all objectives and explanations",
+    "- Missing signatures",
+    "- Less than 3 entries for What Went Well/What Went Wrong",
+    "- Incorrect no. of entries for Learnings & Realizations",
+    "- ALL entries do not address the guide questions",
+    "",
+    "ACTIVITY REPORT, MINOR:",
+    "- Missing or incorrect date/venue on ANP/ANMP table",
+    "- ENP/ENMP inconsistent with PPR",
+    "- Incorrect ANP/ANMP count",
+    "- Objective # _ inconsistent with PPR",
+    "- What Went Well/What Went Wrong # _ is outside activity proper",
+    "- Recommendations do not match What Went Well/What Went Wrong entry",
+    "- Incorrect order of answering questions",
+    "- Answer # _ does not address the guide question",
+    "",
+    "DETAIL RULES:",
+    "- Objectives in the report must be the same as the approved PPR, word for word.",
+    "- ENP and ENMP must follow the approved Pre-Acts. ANMP and ANP must follow the GALS.",
+    "- What Went Well and What Went Wrong each need at least THREE entries WITHIN the activity proper. Up to 2 more may be outside the activity proper and that is not a mistake.",
+    "  Within example: The audience was very active during the icebreaker. Outside example: The Project Heads carried the JEMA blocks to the venue without any difficulty.",
+    "- All Post-Acts sentences and descriptions must be in subject-predicate form (a full sentence with a subject and a verb).",
+    "- Do not copy or rephrase answers from previous events. You cannot see past events, so do not judge this."
+  ].join("\n");
+
+  var ctl = null;
+  var GEM_URL = "https://generativelanguage.googleapis.com/v1beta/models/";
+  function blobToB64(b) { return new Promise(function (res, rej) { var r = new FileReader(); r.onload = function () { res(String(r.result).split(",")[1]); }; r.onerror = rej; r.readAsDataURL(b); }); }
+  function parseJson(t) {
+    try { return JSON.parse(t); } catch (e) {}
+    var m = t.match(/```(?:json)?\s*([\s\S]*?)```/); if (m) { try { return JSON.parse(m[1]); } catch (e) {} }
+    var a = t.search(/[\[{]/), b = Math.max(t.lastIndexOf("}"), t.lastIndexOf("]"));
+    if (a > -1 && b > a) { try { return JSON.parse(t.slice(a, b + 1)); } catch (e) {} }
+    throw { code: "invalid_json" };
+  }
+  async function gem(prompt, opts) {
+    opts = opts || {};
+    var key = $("apiKey").value.trim(); if (!key) throw { code: "no_key" };
+    var model = $("apiModel").value.trim() || "gemini-3.8-flash";
+    var parts = [{ text: prompt }];
+    for (var i = 0; i < (opts.images || []).length; i++) { var b = opts.images[i]; parts.push({ inline_data: { mime_type: b.type || "image/jpeg", data: await blobToB64(b) } }); }
+    var body = { contents: [{ role: "user", parts: parts }], generationConfig: opts.json ? { responseMimeType: "application/json", temperature: 0.2 } : { temperature: 0.1 } };
+    var r;
+    try { r = await fetch(GEM_URL + encodeURIComponent(model) + ":generateContent", { method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": key }, body: JSON.stringify(body), signal: ctl.signal }); }
+    catch (e) { throw { code: e && e.name === "AbortError" ? "cancelled" : "network" }; }
+    if (!r.ok) {
+      var msg = ""; try { msg = ((await r.json()).error || {}).message || ""; } catch (e) {}
+      throw { code: (r.status === 400 && /api key/i.test(msg)) || r.status === 401 || r.status === 403 ? "bad_key" : r.status === 404 ? "bad_model" : r.status === 429 ? "rate_limited" : r.status === 413 ? "prompt_too_large" : "upstream_error", message: msg };
+    }
+    var data = await r.json();
+    var cand = data.candidates && data.candidates[0];
+    var text = ((cand && cand.content && cand.content.parts) || []).filter(function (p) { return !p.thought; }).map(function (p) { return p.text || ""; }).join("");
+    if (!text.trim()) throw { code: data.promptFeedback && data.promptFeedback.blockReason ? "refused" : "empty" };
+    return opts.json ? parseJson(text) : text;
+  }
+
+  function logStep(text) { var li = document.createElement("li"); li.className = "run"; li.textContent = text; $("log").appendChild(li); $("log").hidden = false; return { done: function (t) { li.className = "done"; if (t) li.textContent = t; }, fail: function (t) { li.className = "err"; li.textContent = t; }, set: function (t) { li.textContent = t; } }; }
+
+  async function transcribe(images, label, step) {
+    var B = 8, out = [];
+    for (var i = 0; i < images.length; i += B) {
+      var to = Math.min(images.length, i + B);
+      step.set("Reading " + label + ", page " + (i + 1) + (to > i + 1 ? "–" + to : "") + " of " + images.length);
+      var t = await gem(
+        "These images are pages " + (i + 1) + " to " + to + " of a scanned student organization document (" + label + "). Transcribe all the text exactly as written, in reading order. Start each page with [PAGE n]. Keep tables as rows with | between cells. Write [signature] where there is a signature, [stamp: text] for stamps, and [unreadable] for text you cannot read. Do not add any comments of your own.",
+        { images: images.slice(i, to) }
+      );
+      out.push(t.trim());
+    }
+    return out.join("\n\n");
+  }
+
+  async function readPreActs() {
+    if (state.pre.text) return;
+    var parts = [], imgs = [];
+    state.pre.files.forEach(function (f) { if (f.text) parts.push(f.text); if (f.images && f.images.length) imgs = imgs.concat(f.images); });
+    if (imgs.length) {
+      var s = logStep("Reading the scanned Pre-Acts");
+      var t = await transcribe(imgs, "the approved Pre-Acts", s);
+      parts.push(t); s.done("Read the Pre-Acts (" + imgs.length + " page" + (imgs.length > 1 ? "s" : "") + ")");
+    }
+    state.pre.text = parts.join("\n\n").trim();
+  }
+
+  async function extractDetails() {
+    if (!state.pre.text || state.pre.details) return;
+    var s = logStep("Getting event details from the Pre-Acts");
+    var d = await gem(
+      "From this approved Pre-Acts / project proposal, pull out the event details. Reply with only JSON: {\"event_title\": string, \"arn\": string, \"dates\": [\"YYYY-MM-DD\"], \"start_time\": \"HH:MM\" (24-hour), \"end_time\": \"HH:MM\", \"venue\": string, \"enp\": string, \"enmp\": string, \"objectives\": [string, copied word for word], \"project_heads\": [string with name, contact number and email as written]}. Use \"\" or [] when something is not in the text.\n\n" + state.pre.text.slice(0, 80000),
+      { json: true }
+    );
+    state.pre.details = d && typeof d === "object" ? d : {};
+    applyDetails(state.pre.details);
+    s.done("Got the event details from the Pre-Acts");
+  }
+
+  function galsSummary() {
+    var g = state.post.filter(function (f) { return f.kind === "gals" && f.res; });
+    if (!g.length) return "GALS RESULT: no GALS file was given. Do not judge the ANP/ANMP count against the GALS.";
+    return g.map(function (f) { return "GALS RESULT for " + f.name + " (computed by fixed rules after removing early, late and duplicate entries): ANMP = " + f.res.anmp + ", ANP = " + f.res.anp + " (Members " + f.res.anmp + " + Non-Members " + f.res.nonMembers + "). Dates: " + Object.keys(f.res.days).join(", ") + "."; }).join("\n");
+  }
+
+  async function checkDoc(f) {
+    var s = logStep("Checking " + f.name);
+    var pre = state.pre.text;
+    var others = state.post.filter(function (x) { return x !== f; }).map(function (x) { return x.name + (x.docType ? " (" + x.docType + ")" : ""); }).join(", ") || "none";
+    var prompt =
+      "You are checking one file from a JEMA (De La Salle University student org) Post-Acts submission the way the CSO checker does. Check it against the approved Pre-Acts and the mistakes list below. Apply only the rules that fit this kind of document. Report a mistake only when you can point to it in the text.\n\n" +
+      RULES + "\n\n" + galsSummary() + "\n" +
+      "Other files in this Post-Acts set: " + others + ".\n\n" +
+      "DO NOT report these, the page checks them by itself: 'Objective # _ inconsistent with PPR', 'ENP/ENMP inconsistent with PPR', 'Incorrect ANP/ANMP count', 'Missing all objectives and explanations'. Instead copy those values into report_fields.\n\n" +
+      "LIMITS: The file was turned into plain text, so bold, italics, headers, footers, logos and the exact template are lost, and signatures may be images. Do NOT report 'Not following Boldface and Italicized text', 'Missing JEMA header/footer' or 'Wrong template'. Only report 'Missing signatures' if the signature section itself is missing. If the Pre-Acts text is missing, skip checks that need it and say so in cannot_check.\n\n" +
+      "Reply with ONLY JSON in this shape:\n" +
+      '{"doc_type":"Post-Activity Report" or "GALS" or "List of Pictures" or "Justification Letter" or "AMT Evaluation" or "Other","findings":[{"severity":"Major" or "Minor","mistake":"the label from the list, with # filled in","quote":"text copied EXACTLY from the FILE TEXT, character for character, 3 to 25 words. For something missing, quote the nearest heading.","why":"one plain sentence","fix":"one plain sentence"}],"cannot_check":["short reasons"],"report_fields":{"objectives":["each objective copied EXACTLY as written in the FILE TEXT, without its number"],"enp":"as written","enmp":"as written","anp":"as written","anmp":"as written","attendance_quote":"the exact row or line in the FILE TEXT that holds these numbers"}}\n' +
+      "Set report_fields to null if this file is not a Post-Activity Report. Use \"\" for any value that is not written.\n" +
+      "The quote is used to highlight the mistake, so it must appear in the FILE TEXT exactly. One finding per mistake. Write why and fix in simple English.\n\n" +
+      "=== APPROVED PRE-ACTS ===\n" + (pre ? pre.slice(0, 80000) : "(not provided)") + "\n\n" +
+      "=== FILE: " + f.name + " ===\n" + f.text.slice(0, 120000);
+    var out = await gem(prompt, { json: true });
+    var list = Array.isArray(out && out.findings) ? out.findings : [];
+    var skip = /objective\s*#?\s*\d*\s*(is\s*)?inconsistent|missing all objectives|enp\s*\/\s*enmp|incorrect anp/i;
+    f.findings = list.filter(function (x) { return !(out && out.report_fields && skip.test(String(x.mistake || ""))); }).map(function (x) { return { severity: /major/i.test(x.severity) ? "Major" : "Minor", mistake: String(x.mistake || "Mistake"), quote: String(x.quote || ""), why: String(x.why || ""), fix: String(x.fix || "") }; });
+    if (out && out.report_fields && typeof out.report_fields === "object") {
+      var gf = state.post.filter(function (x) { return x.kind === "gals" && x.res; })[0];
+      f.findings = f.findings.concat(Exact.fields(state.pre.details, out.report_fields, gf ? { anp: gf.res.anp, anmp: gf.res.anmp } : null));
+    }
+    var pos = function (x) { var a = Marks.locate(f.text, x.quote); return a ? a[0] : 1e12; };
+    f.findings.sort(function (a, b) { return pos(a) - pos(b); });
+    f.docType = String(out && out.doc_type || "") || f.docType;
+    f.cannot = Array.isArray(out && out.cannot_check) ? out.cannot_check.map(String) : [];
+    f.checked = true;
+    s.done("Checked " + f.name + " · " + f.findings.length + " mistake" + (f.findings.length === 1 ? "" : "s"));
+    render();
+  }
+
+  var CODE_MSG = { no_key: "Paste your Gemini API key first.", bad_key: "The API key didn't work. Check it in Google AI Studio.", bad_model: "That model name wasn't found. Try gemini-3.8-flash or gemini-3.5-flash-lite.", network: "Could not reach Gemini. Check your internet.", empty: "Gemini gave an empty answer. Press Check again.", upstream_error: "Gemini had a problem. Press Check again.", cancelled: "Stopped.", not_granted: "Claude was not allowed for this page.", sampling_disabled: "Claude is not available for this account.", rate_limited: "Too many checks for now. Try again in a bit.", prompt_too_large: "A file is too long to check in one go.", invalid_json: "An answer came back in the wrong format. Press Check again.", session_expired: "Sign in again, then press Check.", images_unavailable: "Scanned files can't be read in this view. Use a text PDF or Word file.", image_rejected: "One of the scanned pages could not be read. Try a clearer scan.", refused: "Claude could not check this file." };
+
+  async function runAll() {
+    if (state.busy) return;
+    if (state.isExample) { $("runStatus").textContent = "Drop your files first. The ones shown are examples."; return; }
+    if (!state.post.length) { $("runStatus").textContent = "Drop the Post-Acts files first."; return; }
+    if (!$("apiKey").value.trim()) { $("runStatus").textContent = "Paste your Gemini API key first."; $("apiKey").focus(); return; }
+    state.busy = true; ctl = new AbortController();
+    $("runBtn").disabled = true; $("stopBtn").hidden = false; $("log").innerHTML = ""; $("runStatus").textContent = "";
+    var t0 = Date.now();
+    try {
+      if (state.pre.files.length) { await readPreActs(); await extractDetails(); }
+      else logStep("No Pre-Acts given, so checks against it are skipped").done();
+      state.post.forEach(function (f) { if (f.kind === "gals") runGals(f); });
+      var g = state.post.filter(function (f) { return f.kind === "gals"; });
+      if (g.length) logStep("Checked the GALS by rules").done();
+      render();
+      var docs = state.post.filter(function (f) { return f.kind === "doc" && !f.error; });
+      for (var i = 0; i < docs.length; i++) {
+        var f = docs[i];
+        if (!f.text && f.images && f.images.length) { var s = logStep("Reading " + f.name); f.text = await transcribe(f.images, f.name, s); s.done("Read " + f.name); }
+        if (!f.text.trim()) { logStep(f.name + " has no text to check").fail(f.name + " has no text to check"); continue; }
+        try { await checkDoc(f); }
+        catch (e) { if (e && e.code === "cancelled") throw e; logStep(f.name).fail(f.name + ": " + (CODE_MSG[e && e.code] || "could not be checked. Press Check again.")); if (e && /no_key|bad_key|bad_model|rate_limited|network/.test(e.code)) throw e; }
+      }
+      $("runStatus").textContent = "Done in " + Math.round((Date.now() - t0) / 1000) + "s";
+    } catch (e) {
+      $("runStatus").textContent = CODE_MSG[e && e.code] || "Something went wrong. Press Check again.";
+    } finally {
+      state.busy = false; $("runBtn").disabled = false; $("stopBtn").hidden = true; render();
+    }
+  }
+  $("runBtn").addEventListener("click", runAll);
+  $("stopBtn").addEventListener("click", function () { if (ctl) ctl.abort(); });
+
+  // ---------- Rendering ----------
+  function sevClass(sv) { return sv === "Major" ? "major" : sv === "Minor" ? "minor" : "gals"; }
+  function pill(sv) { return '<span class="pill ' + (sv === "Major" ? "major" : sv === "Minor" ? "minor" : "gals") + '">' + esc(sv) + "</span>"; }
+
+  function renderFileLists() {
+    $("preList").innerHTML = state.pre.files.map(function (f, i) { return '<li><span class="nm" title="' + esc(f.name) + '">' + esc(f.name) + '</span><span class="sub">' + esc(f.sub || "") + "</span>" + (state.isExample ? "" : '<button type="button" data-pre="' + i + '">Remove</button>') + "</li>"; }).join("");
+    $("postList").innerHTML = state.post.map(function (f) { return '<li><span class="nm" title="' + esc(f.name) + '">' + esc(f.name) + '</span><span class="sub">' + esc(f.sub || describe(f)) + "</span>" + (state.isExample ? "" : '<button type="button" data-post="' + f.id + '">Remove</button>') + "</li>"; }).join("");
+  }
+  $("preList").addEventListener("click", function (e) { var b = e.target.closest("button[data-pre]"); if (!b || state.busy) return; state.pre.files.splice(+b.dataset.pre, 1); state.pre.text = ""; state.pre.details = null; render(); });
+  $("postList").addEventListener("click", function (e) { var b = e.target.closest("button[data-post]"); if (!b || state.busy) return; state.post = state.post.filter(function (f) { return f.id !== b.dataset.post; }); if (state.view === b.dataset.post) state.view = "pre"; render(); });
+
+  function allFindings() { return state.post.reduce(function (a, f) { return a.concat(f.findings || []); }, []); }
+  function renderTally() {
+    var all = allFindings();
+    var c = function (s) { return all.filter(function (f) { return f.severity === s; }).length; };
+    $("tally").innerHTML = '<span class="pill major">' + c("Major") + " Major</span>" + '<span class="pill minor">' + c("Minor") + " Minor</span>" + '<span class="pill gals">' + c("GALS") + " GALS</span>";
+  }
+
+  function renderTabs() {
+    var tabs = [{ id: "pre", label: "Pre-Acts", n: null }].concat(state.post.map(function (f) { return { id: f.id, label: f.docType || f.name, n: f.kind === "gals" ? (f.findings || []).filter(function (x) { return x.severity !== "Note"; }).length : (f.checked ? f.findings.length : null) }; }));
+    if (!tabs.some(function (t) { return t.id === state.view; })) state.view = "pre";
+    $("tabs").innerHTML = tabs.map(function (t) { return '<button role="tab" type="button" data-tab="' + t.id + '" aria-selected="' + (t.id === state.view) + '">' + esc(t.label) + (t.n == null ? "" : '<span class="cnt' + (t.n ? " has" : "") + '">' + t.n + "</span>") + "</button>"; }).join("");
+  }
+  $("tabs").addEventListener("click", function (e) { var b = e.target.closest("button[data-tab]"); if (!b) return; state.view = b.dataset.tab; renderTabs(); renderView(); });
+
+  function renderPre() {
+    var d = state.pre.details;
+    if (!state.pre.files.length) return '<div class="empty">Drop the approved Pre-Acts to compare the Post-Acts against it.</div>';
+    var html = "";
+    if (d) {
+      var row = function (k, v) { return v && (!Array.isArray(v) || v.length) ? "<dt>" + k + "</dt><dd>" + (Array.isArray(v) ? v.map(function (x, i) { return esc((i + 1) + ". " + x); }).join("<br>") : esc(v)) + "</dd>" : ""; };
+      html += '<dl class="details">' + row("Title", d.event_title) + row("ARN", d.arn) + row("Date", (d.dates || []).join(", ")) + row("Time", [d.start_time, d.end_time].filter(Boolean).join(" to ")) + row("Venue", d.venue) + row("ENP", d.enp) + row("ENMP", d.enmp) + row("Objectives", d.objectives) + row("Project Head", d.project_heads) + "</dl>";
+    }
+    if (state.pre.text) html += '<p class="hint" style="margin-top:16px;font-weight:600">What was read from the Pre-Acts</p><div class="paper" style="margin-top:8px">' + esc(state.pre.text) + "</div>";
+    else html += '<div class="empty">The Pre-Acts will be read when you press Check Post-Acts.</div>';
+    return html;
+  }
+
+  function commentHtml(f, n, opts) {
+    var cls = sevClass(f.severity);
+    return '<div class="cmt ' + cls + '" data-n="' + n + '" id="c-' + n + '"><div class="hd"><span class="num">' + n + "</span>" + pill(f.severity) + '</div><div class="t">' + esc(f.mistake) + '</div><div class="why">' + esc(f.why) + "</div>" + (f.fix ? '<div class="fix"><b>Fix:</b> ' + esc(f.fix) + "</div>" : "") + (opts && opts.loose ? '<div class="loose">Not highlighted' + (f.quote ? ': "' + esc(f.quote) + '"' : "") + "</div>" : "") + (opts && opts.where ? '<div class="loose">' + esc(opts.where) + "</div>" : "") + "</div>";
+  }
+
+  function renderDoc(f) {
+    if (f.error) return '<div class="empty">' + esc(f.error) + "</div>";
+    if (!f.text) return '<div class="empty">' + (f.images && f.images.length ? "This is a scanned file. Gemini will read it when you press Check Post-Acts." : "No text found in this file.") + "</div>";
+    var findings = f.findings || [];
+    var plan = Marks.plan(f.text, findings);
+    var html = "", at = 0;
+    plan.ranges.forEach(function (r) {
+      html += esc(f.text.slice(at, r.start));
+      html += '<mark class="' + (r.major ? "major" : "") + '" data-ids="' + r.ids.join(",") + '">' + esc(f.text.slice(r.start, r.end)) + "<sup>" + r.ids.join(",") + "</sup></mark>";
+      at = r.end;
+    });
+    html += esc(f.text.slice(at));
+    var loose = {}; plan.loose.forEach(function (n) { loose[n] = 1; });
+    var cmts = !f.checked ? '<div class="empty">Not checked yet. Press Check Post-Acts.</div>' :
+      findings.length ? findings.map(function (x, k) { return commentHtml(x, k + 1, { loose: loose[k + 1] }); }).join("") : '<div class="cmt gals"><div class="t">No mistakes found</div><div class="why">Still check the formatting items at the bottom of the page by hand.</div></div>';
+    if (f.cannot && f.cannot.length) cmts += '<div class="cmt gals"><div class="t">Not checked</div><div class="why">' + f.cannot.map(esc).join("<br>") + "</div></div>";
+    return '<div class="viewer"><div class="paper" id="paper">' + html + '</div><div class="comments">' + cmts + "</div></div>";
+  }
+
+  function renderGals(f) {
+    var res = f.res;
+    var opts = '<option value="-1">(none)</option>' + f.headers.map(function (h, i) { return '<option value="' + i + '">' + esc(h) + "</option>"; }).join("");
+    var sel = function (key, label) { return '<label class="f">' + label + '<select data-col="' + key + '">' + opts.replace('value="' + f.cols[key] + '"', 'value="' + f.cols[key] + '" selected') + "</select></label>"; };
+    var html = '<div class="grid2" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">' +
+      (f.sheetNames.length > 1 ? '<label class="f">Sheet<select data-sheet="1">' + f.sheetNames.map(function (n, i) { return '<option value="' + i + '"' + (i === f.sheet ? " selected" : "") + ">" + esc(n) + "</option>"; }).join("") + "</select></label>" : "") +
+      sel("time", "Timestamp") + sel("member", "Member category") + sel("email", "Email") + sel("id", "ID number") + sel("name", "Name") + "</div>";
+    if (!res) return html + '<div class="empty">' + (f.cols.time < 0 ? "Pick the Timestamp column." : "Add the event date in step 03 to check the GALS.") + "</div>";
+    var w = res.written;
+    html += '<div class="stats"><div><b>' + res.entries.length + "</b><span>Entries</span></div><div><b>" + res.valid.length + "</b><span>Counted</span></div><div><b>" + res.anmp + "</b><span>ANMP</span></div><div><b>" + res.anp + "</b><span>ANP</span></div></div>" +
+      '<p class="hint">Allowed window: ' + esc(Gals.fmt(res.earliest)) + " to " + esc(Gals.fmt(res.latest)) + "." + (w.anmp != null || w.anp != null ? " The GALS says ANMP " + (w.anmp != null ? w.anmp : "?") + " and ANP " + (w.anp != null ? w.anp : "?") + "." : "") + "</p>";
+    var cm = f.findings.length ? f.findings.map(function (x, k) { return commentHtml(x, k + 1, { where: x.where }); }).join("") : '<div class="cmt gals"><div class="t">No GALS mistakes found</div></div>';
+    var flagMap = {}; res.entries.forEach(function (e) { if (e.flags.length) flagMap[e.row] = e.flags.map(function (x) { return x.text; }).join("; "); });
+    var grid = f.grids[f.sheet], cols = f.headers.length;
+    var table = '<div class="tablebox"><table><thead><tr><th>Row</th>' + f.headers.map(function (h) { return "<th>" + esc(h) + "</th>"; }).join("") + "<th>Comment</th></tr></thead><tbody>" +
+      grid.slice(1, 600).map(function (r, i) { var rn = i + 2, bad = flagMap[rn]; return '<tr class="' + (bad ? "bad" : "") + '"><td class="mono">' + rn + "</td>" + Array.from({ length: cols }, function (_, c) { var v = r[c]; return "<td>" + esc(v instanceof Date ? Gals.fmt(v) : v) + "</td>"; }).join("") + '<td class="note">' + esc(bad || "") + "</td></tr>"; }).join("") + "</tbody></table></div>";
+    return html + '<div class="viewer"><div style="min-width:0">' + table + '</div><div class="comments" style="margin-top:12px">' + cm + "</div></div>";
+  }
+
+  function renderView() {
+    $("copyFallback").hidden = true; $("copyStatus").textContent = "";
+    var f = state.post.filter(function (x) { return x.id === state.view; })[0];
+    $("view").innerHTML = !f ? renderPre() : f.kind === "gals" ? renderGals(f) : renderDoc(f);
+    $("copyBtn").hidden = !f;
+  }
+  $("view").addEventListener("change", function (e) {
+    var f = state.post.filter(function (x) { return x.id === state.view; })[0]; if (!f) return;
+    if (e.target.dataset.col) { f.cols[e.target.dataset.col] = +e.target.value; runGals(f); render(); }
+    if (e.target.dataset.sheet) { f.sheet = +e.target.value; prepGals(f); render(); }
+  });
+  $("view").addEventListener("click", function (e) {
+    var m = e.target.closest("mark[data-ids]"), c = e.target.closest(".cmt[data-n]");
+    var flash = function (el) { if (!el) return; el.scrollIntoView({ block: "nearest", behavior: "smooth" }); el.classList.add("flash"); setTimeout(function () { el.classList.remove("flash"); }, 1200); };
+    if (m) flash($("c-" + m.dataset.ids.split(",")[0]));
+    if (c) flash(Array.from(document.querySelectorAll("mark[data-ids]")).filter(function (x) { return x.dataset.ids.split(",").indexOf(c.dataset.n) > -1; })[0]);
+  });
+
+  $("copyBtn").addEventListener("click", function () {
+    var f = state.post.filter(function (x) { return x.id === state.view; })[0]; if (!f) return;
+    var lines = (f.findings || []).map(function (x, k) { return (k + 1) + ". [" + x.severity + "] " + x.mistake + (x.quote ? ' ("' + x.quote + '")' : x.where ? " (" + x.where + ")" : "") + ": " + x.why + (x.fix ? " Fix: " + x.fix : ""); });
+    var text = f.name + "\n" + (lines.length ? lines.join("\n") : "No mistakes found.");
+    var done = function () { $("copyStatus").textContent = "Copied " + lines.length + " comments"; };
+    var fail = function () { $("copyFallback").hidden = false; $("copyFallback").value = text; $("copyFallback").rows = Math.min(14, lines.length + 2); $("copyFallback").select(); $("copyStatus").textContent = "Select the text below and copy it"; };
+    try { navigator.clipboard.writeText(text).then(done, fail); } catch (e) { fail(); }
+  });
+
+  function render() {
+    renderFileLists(); renderTally(); renderTabs(); renderView();
+    $("exampleBanner").hidden = !state.isExample;
+  }
+
+  // ---------- Key storage (this browser only) ----------
+  try { var saved = localStorage.getItem("postacts_gemini_key"); if (saved) { $("apiKey").value = saved; $("rememberKey").checked = true; } var sm = localStorage.getItem("postacts_gemini_model"); if (sm) $("apiModel").value = sm; } catch (e) {}
+  function saveKey() { try { if ($("rememberKey").checked) localStorage.setItem("postacts_gemini_key", $("apiKey").value.trim()); else localStorage.removeItem("postacts_gemini_key"); localStorage.setItem("postacts_gemini_model", $("apiModel").value.trim()); } catch (e) {} }
+  ["apiKey", "apiModel", "rememberKey"].forEach(function (id) { $(id).addEventListener("change", saveKey); });
+
+  loadExample();
+  render();
+})();
+</script>
+</body>
+</html>
